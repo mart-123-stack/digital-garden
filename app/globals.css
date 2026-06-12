@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --font-serif: "Cormorant Garamond";
+  --font-sans: "Avenir Next";
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  overflow-x: hidden;
+  background: #03040a;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  cursor: none;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  cursor: none;
+}
+
+::selection {
+  background: rgba(155, 220, 255, 0.24);
+  color: #eef4ff;
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.24;
+    transform: scale(0.82);
+  }
+
+  45% {
+    opacity: 0.84;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes nebula-drift {
+  0% {
+    transform: translate3d(-2%, 1%, 0) rotate(0deg);
+  }
+
+  50% {
+    transform: translate3d(2%, -1%, 0) rotate(7deg);
+  }
+
+  100% {
+    transform: translate3d(-2%, 1%, 0) rotate(0deg);
+  }
+}
+
+.cosmic-star {
+  position: absolute;
+  border-radius: 9999px;
+  background: currentColor;
+  color: rgba(238, 244, 255, 0.84);
+  box-shadow: 0 0 10px currentColor;
+  animation: twinkle var(--twinkle-duration) ease-in-out infinite;
+  animation-delay: var(--twinkle-delay);
+  will-change: opacity, transform;
+}
+
+.cosmic-shell.is-warping .cosmic-star {
+  animation-duration: 0.22s !important;
+  box-shadow:
+    0 0 14px currentColor,
+    0 24px 34px rgba(238, 244, 255, 0.24);
+}
+
+.cosmic-shell.is-warping .cosmic-dust {
+  opacity: 0.82;
+  filter: blur(0.6px);
+}
+
+.cosmic-shell.is-warping .nebula-field {
+  animation-duration: 2.6s;
+  opacity: 0.9;
+  filter: blur(18px) saturate(150%);
+}
+
+.cosmic-shell.is-night .nebula-field,
+.cosmic-shell.is-night .cosmic-dust,
+.cosmic-shell.is-night .distant-planet {
+  opacity: 0.2;
+}
+
+.cosmic-shell.is-night .cosmic-star {
+  opacity: 0.42 !important;
+}
+
+.nebula-field {
+  background:
+    radial-gradient(circle at 24% 36%, rgba(155, 220, 255, 0.12), transparent 28%),
+    radial-gradient(circle at 72% 28%, rgba(232, 93, 117, 0.10), transparent 22%),
+    radial-gradient(circle at 44% 18%, rgba(245, 200, 75, 0.08), transparent 18%),
+    radial-gradient(circle at 55% 70%, rgba(219, 232, 255, 0.08), transparent 26%);
+  filter: blur(22px) saturate(120%);
+  opacity: 0.72;
+  animation: nebula-drift 26s ease-in-out infinite;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.cosmic-dust {
+  background-image:
+    radial-gradient(circle, rgba(238, 244, 255, 0.26) 0 1px, transparent 1.25px),
+    radial-gradient(circle, rgba(245, 200, 75, 0.18) 0 1px, transparent 1.2px),
+    radial-gradient(circle, rgba(232, 93, 117, 0.14) 0 1px, transparent 1.15px);
+  background-position:
+    0 0,
+    37px 61px,
+    91px 19px;
+  background-size:
+    112px 112px,
+    176px 176px,
+    244px 244px;
+  mask-image: radial-gradient(circle at center, black 0 58%, transparent 82%);
+  opacity: 0.5;
+  will-change: transform;
+}
+
+.distant-planet {
+  pointer-events: none;
+  filter: blur(0.5px) saturate(105%);
+  opacity: 0.34;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.distant-planet-large {
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 246, 213, 0.32), transparent 0 13%),
+    radial-gradient(circle at 38% 34%, rgba(245, 200, 75, 0.24), transparent 0 33%),
+    radial-gradient(circle at 72% 72%, rgba(8, 10, 26, 0.78), transparent 0 58%),
+    linear-gradient(135deg, rgba(232, 93, 117, 0.22), rgba(245, 200, 75, 0.16) 42%, rgba(8, 10, 26, 0.72));
+  box-shadow:
+    inset 18px 18px 36px rgba(255, 248, 220, 0.08),
+    inset -44px -38px 70px rgba(1, 3, 12, 0.72),
+    0 0 68px rgba(245, 200, 75, 0.08);
+}
+
+.distant-planet-small {
+  background:
+    radial-gradient(circle at 32% 28%, rgba(238, 244, 255, 0.26), transparent 0 21%),
+    radial-gradient(circle at 70% 72%, rgba(1, 3, 12, 0.72), transparent 0 58%),
+    linear-gradient(135deg, rgba(232, 93, 117, 0.26), rgba(115, 86, 177, 0.22) 58%, rgba(4, 7, 19, 0.82));
+  box-shadow:
+    inset 10px 10px 22px rgba(255, 255, 255, 0.07),
+    inset -22px -20px 42px rgba(1, 3, 12, 0.76),
+    0 0 38px rgba(232, 93, 117, 0.08);
+}
+
+@media (hover: none), (pointer: coarse) {
+  body,
+  button,
+  a,
+  input,
+  textarea,
+  select {
+    cursor: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
