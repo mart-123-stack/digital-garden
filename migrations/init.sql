@@ -1,4 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -126,6 +127,16 @@ CREATE TABLE IF NOT EXISTS pets (
 
 CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug);
 CREATE INDEX IF NOT EXISTS idx_posts_published ON posts(published, published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_full_text_search
+ON posts
+USING GIN ((
+  setweight(to_tsvector('simple', COALESCE(title, '')), 'A') ||
+  setweight(to_tsvector('simple', COALESCE(excerpt, '')), 'B') ||
+  setweight(to_tsvector('simple', COALESCE(content, '')), 'C')
+));
+CREATE INDEX IF NOT EXISTS idx_posts_title_trgm ON posts USING GIN (title gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_posts_excerpt_trgm ON posts USING GIN (excerpt gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_posts_content_trgm ON posts USING GIN (content gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_notes_slug ON notes(slug);
 CREATE INDEX IF NOT EXISTS idx_comments_target ON comments(target_type, target_slug, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_reactions_target ON reactions(target_type, target_slug, reaction_type);

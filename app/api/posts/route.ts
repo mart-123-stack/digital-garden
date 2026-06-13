@@ -37,10 +37,23 @@ export async function GET(request: NextRequest) {
 
     const params: unknown[] = [];
     const conditions = includeDrafts ? ["TRUE"] : ["published = TRUE"];
+    let searchParamIndex: number | null = null;
 
     if (search) {
-      params.push(`%${search}%`);
-      conditions.push(`(title ILIKE $${params.length} OR excerpt ILIKE $${params.length} OR content ILIKE $${params.length})`);
+      params.push(search);
+      searchParamIndex = params.length;
+      conditions.push(
+        `(
+          (
+            setweight(to_tsvector('simple', COALESCE(title, '')), 'A') ||
+            setweight(to_tsvector('simple', COALESCE(excerpt, '')), 'B') ||
+            setweight(to_tsvector('simple', COALESCE(content, '')), 'C')
+          ) @@ websearch_to_tsquery('simple', $${searchParamIndex})
+          OR title ILIKE '%' || $${searchParamIndex} || '%'
+          OR excerpt ILIKE '%' || $${searchParamIndex} || '%'
+          OR content ILIKE '%' || $${searchParamIndex} || '%'
+        )`
+      );
     }
 
     if (tag) {
@@ -56,11 +69,23 @@ export async function GET(request: NextRequest) {
     );
 
     params.push(limit, offset);
+    const searchRankSelect = searchParamIndex
+      ? `, ts_rank_cd(
+          setweight(to_tsvector('simple', COALESCE(title, '')), 'A') ||
+          setweight(to_tsvector('simple', COALESCE(excerpt, '')), 'B') ||
+          setweight(to_tsvector('simple', COALESCE(content, '')), 'C'),
+          websearch_to_tsquery('simple', $${searchParamIndex})
+        ) AS search_rank`
+      : "";
+    const orderBy = searchParamIndex
+      ? "search_rank DESC, COALESCE(published_at, created_at) DESC"
+      : "COALESCE(published_at, created_at) DESC";
+
     const result = await query<PostRow>(
-      `SELECT id, title, slug, excerpt, cover_url, tags, published, published_at, created_at, updated_at
+      `SELECT id, title, slug, excerpt, cover_url, tags, published, published_at, created_at, updated_at${searchRankSelect}
        FROM posts
        WHERE ${conditions.join(" AND ")}
-       ORDER BY COALESCE(published_at, created_at) DESC
+       ORDER BY ${orderBy}
        LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
     );

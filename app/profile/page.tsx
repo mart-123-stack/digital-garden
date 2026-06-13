@@ -218,36 +218,87 @@ function ActivityBento({
 }
 
 function PetPanel({ pet }: { pet: StarPet }) {
+  const [mood, setMood] = useState<"curious" | "happy" | "sleepy">("curious");
   const progress = Math.min(100, pet.xp % 100);
   const isEgg = pet.species === "egg";
+  const moodText = {
+    curious: "正在观察你的航线",
+    happy: "星糖能量补充完毕",
+    sleepy: "进入月光省电模式"
+  }[mood];
+
+  function feedPet() {
+    setMood("happy");
+    window.setTimeout(() => setMood("curious"), 1600);
+  }
 
   return (
     <motion.section
-      className="relative overflow-hidden rounded-[1.5rem] border border-yellow-200/16 bg-white/[0.055] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_48px_rgba(2,6,23,0.22)] backdrop-blur-md"
+      className="relative overflow-hidden rounded-[1.5rem] border border-yellow-200/16 bg-[radial-gradient(circle_at_18%_18%,rgba(253,224,71,0.12),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.07),rgba(34,211,238,0.045))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_48px_rgba(2,6,23,0.22)] backdrop-blur-md"
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 130, damping: 18 }}
     >
-      <div className="flex items-center gap-5">
-        <motion.div
-          className={[
-            "relative h-24 w-20 rounded-[48%_52%_46%_54%] shadow-[inset_10px_12px_18px_rgba(255,255,255,0.26),inset_-16px_-18px_26px_rgba(113,63,18,0.34),0_0_34px_rgba(250,204,21,0.18)]",
-            isEgg
-              ? "bg-[radial-gradient(circle_at_34%_24%,rgba(255,255,255,0.8),transparent_0_18%),linear-gradient(135deg,#fef3c7,#fbbf24)]"
-              : "bg-[radial-gradient(circle_at_34%_24%,rgba(255,255,255,0.7),transparent_0_16%),linear-gradient(135deg,#bae6fd,#22d3ee)]"
-          ].join(" ")}
-          animate={{ y: [0, -5, 0], rotate: [-2, 2, -2] }}
-          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <span className="absolute left-5 top-8 h-2 w-2 rounded-full bg-slate-900/62" />
-          <span className="absolute right-5 top-8 h-2 w-2 rounded-full bg-slate-900/62" />
-          <span className="absolute bottom-8 left-1/2 h-1 w-5 -translate-x-1/2 rounded-full bg-slate-900/26" />
-        </motion.div>
+      <div className="pointer-events-none absolute right-6 top-5 h-24 w-24 rounded-full bg-[radial-gradient(circle,rgba(250,204,21,0.18),transparent_68%)] blur-sm" />
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+        <div className="relative h-36 w-36 shrink-0">
+          <motion.div
+            aria-hidden="true"
+            className="absolute inset-3 rounded-full border border-cyan-100/14 bg-cyan-100/5 shadow-[0_0_34px_rgba(34,211,238,0.12)]"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+          >
+            <span className="absolute left-1/2 top-[-3px] h-2 w-2 -translate-x-1/2 rounded-full bg-yellow-200 shadow-[0_0_16px_rgba(250,204,21,0.72)]" />
+          </motion.div>
+
+          <motion.div
+            className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2"
+            animate={
+              mood === "happy"
+                ? { y: [0, -10, 0], scale: [1, 1.08, 1], rotate: [-3, 4, -3] }
+                : { y: [0, -5, 0], rotate: [-2, 2, -2] }
+            }
+            transition={{ duration: mood === "happy" ? 0.72 : 2.6, repeat: Infinity, ease: "easeInOut" }}
+          >
+            {isEgg ? (
+              <div className="absolute inset-x-3 top-4 h-24 rounded-[48%_52%_46%_54%] bg-[radial-gradient(circle_at_34%_24%,rgba(255,255,255,0.8),transparent_0_18%),linear-gradient(135deg,#fef3c7,#fbbf24)] shadow-[inset_10px_12px_18px_rgba(255,255,255,0.26),inset_-16px_-18px_26px_rgba(113,63,18,0.34),0_0_34px_rgba(250,204,21,0.18)]">
+                <span className="absolute left-1/2 top-[-14px] h-5 w-1 -translate-x-1/2 rounded-full bg-yellow-100/70 shadow-[0_0_10px_rgba(254,240,138,0.8)]" />
+                <span className="absolute left-1/2 top-[-18px] h-3 w-3 -translate-x-1/2 rounded-full bg-cyan-200 shadow-[0_0_16px_rgba(103,232,249,0.85)]" />
+                <span className="absolute left-5 top-5 h-8 w-10 rotate-12 border-t-2 border-dashed border-amber-700/34" />
+                <span className="absolute left-6 top-9 h-2 w-2 rounded-full bg-slate-900/62" />
+                <span className="absolute right-6 top-9 h-2 w-2 rounded-full bg-slate-900/62" />
+                <span className="absolute bottom-9 left-1/2 h-1 w-5 -translate-x-1/2 rounded-full bg-slate-900/26" />
+                <span className="absolute bottom-[-5px] left-5 h-4 w-5 rounded-full bg-amber-600/60" />
+                <span className="absolute bottom-[-5px] right-5 h-4 w-5 rounded-full bg-amber-600/60" />
+              </div>
+            ) : (
+              <div className="absolute inset-0">
+                <span className="absolute left-3 top-2 h-10 w-8 -rotate-12 rounded-[70%_30%_65%_35%] bg-cyan-200 shadow-[inset_4px_5px_8px_rgba(255,255,255,0.38),inset_-5px_-6px_10px_rgba(14,116,144,0.28)]" />
+                <span className="absolute right-3 top-2 h-10 w-8 rotate-12 rounded-[30%_70%_35%_65%] bg-cyan-200 shadow-[inset_4px_5px_8px_rgba(255,255,255,0.38),inset_-5px_-6px_10px_rgba(14,116,144,0.28)]" />
+                <span className="absolute left-5 top-5 h-20 w-20 rounded-[46%_54%_50%_50%] bg-[radial-gradient(circle_at_34%_26%,rgba(255,255,255,0.78),transparent_0_18%),linear-gradient(135deg,#bae6fd,#22d3ee_56%,#0e7490)] shadow-[inset_10px_12px_18px_rgba(255,255,255,0.24),inset_-15px_-17px_24px_rgba(8,47,73,0.36),0_0_36px_rgba(34,211,238,0.22)]" />
+                <span className="absolute right-0 top-12 h-8 w-12 rotate-12 rounded-full bg-gradient-to-r from-cyan-300 to-yellow-100 shadow-[inset_4px_5px_8px_rgba(255,255,255,0.28),0_0_18px_rgba(250,204,21,0.18)]" />
+                <span className="absolute left-10 top-11 h-2.5 w-2.5 rounded-full bg-slate-950/70 shadow-[0_0_0_2px_rgba(255,255,255,0.16)]" />
+                <span className="absolute right-10 top-11 h-2.5 w-2.5 rounded-full bg-slate-950/70 shadow-[0_0_0_2px_rgba(255,255,255,0.16)]" />
+                <span
+                  className={[
+                    "absolute left-1/2 top-[3.55rem] h-1.5 -translate-x-1/2 rounded-full bg-slate-950/34 transition-all",
+                    mood === "happy" ? "w-8" : mood === "sleepy" ? "w-3" : "w-5"
+                  ].join(" ")}
+                />
+                <span className="absolute bottom-0 left-9 h-4 w-5 rounded-full bg-cyan-600/70" />
+                <span className="absolute bottom-0 right-9 h-4 w-5 rounded-full bg-cyan-600/70" />
+              </div>
+            )}
+          </motion.div>
+        </div>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] uppercase tracking-[0.32em] text-yellow-100/62">Star Pet</p>
           <h2 className="mt-2 font-display text-3xl text-starlight">{pet.name}</h2>
           <p className="mt-2 text-sm text-starlight/50">
             Lv.{pet.level} · {pet.xp} xp · {isEgg ? "免费初始蛋，等待积分孵化" : pet.species}
+          </p>
+          <p className="mt-2 rounded-full border border-yellow-100/14 bg-yellow-100/8 px-3 py-1 text-xs text-yellow-50/68">
+            {moodText}
           </p>
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
             <motion.div
@@ -256,6 +307,22 @@ function PetPanel({ pet }: { pet: StarPet }) {
               animate={{ width: `${progress}%` }}
               transition={{ type: "spring", stiffness: 120, damping: 18 }}
             />
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={feedPet}
+              className="rounded-full border border-yellow-100/20 bg-yellow-100/10 px-4 py-2 text-xs text-yellow-50/78 transition hover:bg-yellow-100/16"
+            >
+              投喂星糖
+            </button>
+            <button
+              type="button"
+              onClick={() => setMood("sleepy")}
+              className="rounded-full border border-cyan-100/16 bg-cyan-100/8 px-4 py-2 text-xs text-cyan-50/66 transition hover:bg-cyan-100/12"
+            >
+              月光休眠
+            </button>
           </div>
         </div>
       </div>

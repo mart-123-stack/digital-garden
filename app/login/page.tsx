@@ -18,6 +18,14 @@ function LoginForm() {
   const nextPath = searchParams.get("next") || "/profile";
   const oauthError = searchParams.get("error");
 
+  function formatOAuthError(value: string) {
+    if (value === "github_oauth_not_configured") return "GitHub OAuth 还没有配置 Client ID / Secret。";
+    if (value === "github_state") return "GitHub 登录状态已失效，请重新点击登录。";
+    if (value.includes("redirect_uri")) return "GitHub 回调地址不匹配，请检查 OAuth App callback URL。";
+    if (value.includes("token") || value.includes("exchange")) return "GitHub 授权交换失败，请稍后重试。";
+    return value;
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -84,7 +92,7 @@ function LoginForm() {
 
         {error || oauthError ? (
           <p className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-500/10 p-3 text-sm text-rose-100">
-            {error || `GitHub 登录失败：${oauthError}`}
+            {error || `GitHub 登录失败：${formatOAuthError(oauthError || "")}`}
           </p>
         ) : null}
 

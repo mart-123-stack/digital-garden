@@ -22,10 +22,22 @@ type GitHubEmail = {
 };
 
 function redirectTo(request: NextRequest, path: string) {
-  return new URL(path, process.env.NEXT_PUBLIC_SITE_URL || request.url);
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configured) return new URL(path, configured);
+
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const host = forwardedHost || request.headers.get("host");
+  const proto = forwardedProto || new URL(request.url).protocol.replace(":", "");
+
+  return new URL(path, host ? `${proto}://${host}` : request.url);
 }
 
 async function exchangeCode(code: string, request: NextRequest) {
+  if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
+    throw new Error("github_oauth_not_configured");
+  }
+
   const callbackUrl = redirectTo(request, "/api/auth/github/callback");
   const response = await fetch("https://github.com/login/oauth/access_token", {
     method: "POST",

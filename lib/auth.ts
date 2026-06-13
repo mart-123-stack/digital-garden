@@ -176,6 +176,32 @@ export async function upsertGitHubUser(input: {
     return { error: "GitHub identity is incomplete" };
   }
 
+  const existingProvider = await query<UserRow>(
+    `SELECT id, email, name, nickname, avatar_url, role
+     FROM users
+     WHERE auth_provider = 'github' AND provider_id = $1
+     LIMIT 1`,
+    [input.githubId]
+  );
+
+  if (existingProvider.rows[0]) {
+    const result = await query<UserRow>(
+      `UPDATE users
+       SET
+         email = $2,
+         name = COALESCE(NULLIF(users.name, ''), $3),
+         nickname = COALESCE(NULLIF(users.nickname, ''), $4),
+         avatar_url = COALESCE($5, users.avatar_url),
+         last_login_at = NOW(),
+         updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, email, name, nickname, avatar_url, role`,
+      [existingProvider.rows[0].id, email, name, nickname, input.avatarUrl]
+    );
+
+    return { user: normalizeUser(result.rows[0]) };
+  }
+
   const result = await query<UserRow>(
     `INSERT INTO users (email, name, nickname, avatar_url, auth_provider, provider_id, last_login_at)
      VALUES ($1, $2, $3, $4, 'github', $5, NOW())
