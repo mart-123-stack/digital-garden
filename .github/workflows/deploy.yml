@@ -1,0 +1,68 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Build MCP server
+        working-directory: mcp
+        run: |
+          npm ci
+          npm run build
+
+  deploy:
+    name: Deploy to ECS
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          GIT_REF: ${{ github.sha }}
+          COMPOSE_PROFILES: ${{ secrets.COMPOSE_PROFILES }}
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          envs: GIT_REF,COMPOSE_PROFILES
+          script: |
+            cd /opt/digital-garden/app
+            git fetch --prune origin "+refs/heads/main:refs/remotes/origin/main"
+            git reset --hard "$GIT_REF"
+            if [ ! -f .env ]; then
+              echo ".env is missing in /opt/digital-garden/app" >&2
+              exit 1
+            fi
+            if [ -n "$COMPOSE_PROFILES" ]; then
+              docker compose --profile "$COMPOSE_PROFILES" up -d --build
+            else
+              docker compose up -d --build
+            fi
+            docker compose ps

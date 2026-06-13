@@ -13,6 +13,7 @@ type PostRow = {
   excerpt: string;
   content?: string;
   cover_url: string | null;
+  tags: string[];
   published: boolean;
   published_at: string | null;
   created_at: string;
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, Number(searchParams.get("page") || 1));
     const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") || 10)));
     const search = searchParams.get("search")?.trim();
+    const tag = searchParams.get("tag")?.trim();
     const includeDrafts = searchParams.get("drafts") === "true";
     const offset = (page - 1) * limit;
     const user = await getUserFromRequest(request);
@@ -41,9 +43,21 @@ export async function GET(request: NextRequest) {
       conditions.push(`(title ILIKE $${params.length} OR excerpt ILIKE $${params.length} OR content ILIKE $${params.length})`);
     }
 
+    if (tag) {
+      params.push(tag);
+      conditions.push(`tags ? $${params.length}`);
+    }
+
+    const countResult = await query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count
+       FROM posts
+       WHERE ${conditions.join(" AND ")}`,
+      params
+    );
+
     params.push(limit, offset);
     const result = await query<PostRow>(
-      `SELECT id, title, slug, excerpt, cover_url, published, published_at, created_at, updated_at
+      `SELECT id, title, slug, excerpt, cover_url, tags, published, published_at, created_at, updated_at
        FROM posts
        WHERE ${conditions.join(" AND ")}
        ORDER BY COALESCE(published_at, created_at) DESC
@@ -51,7 +65,8 @@ export async function GET(request: NextRequest) {
       params
     );
 
-    return NextResponse.json({ posts: result.rows, page, limit });
+    const total = Number(countResult.rows[0]?.count || 0);
+    return NextResponse.json({ posts: result.rows, page, limit, total, totalPages: Math.ceil(total / limit) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load posts";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -68,15 +83,16 @@ export async function POST(request: NextRequest) {
     const published = Boolean(body.published);
 
     const result = await query<PostRow>(
-      `INSERT INTO posts (title, slug, excerpt, content, cover_url, author_id, published, published_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, CASE WHEN $7 THEN NOW() ELSE NULL END)
-       RETURNING id, title, slug, excerpt, content, cover_url, published, published_at, created_at, updated_at`,
+      `INSERT INTO posts (title, slug, excerpt, content, cover_url, tags, author_id, published, published_at)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, CASE WHEN $8 THEN NOW() ELSE NULL END)
+       RETURNING id, title, slug, excerpt, content, cover_url, tags, published, published_at, created_at, updated_at`,
       [
         body.title,
         slug,
         body.excerpt || "",
         body.content || "",
         body.coverUrl || null,
+        JSON.stringify(body.tags || []),
         user?.id === "admin" ? null : user?.id || null,
         published
       ]

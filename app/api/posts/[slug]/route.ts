@@ -13,7 +13,7 @@ export async function GET(
 
   try {
     const result = await query(
-      `SELECT id, title, slug, excerpt, content, cover_url, published, published_at, created_at, updated_at
+      `SELECT id, title, slug, excerpt, content, cover_url, tags, published, published_at, created_at, updated_at
        FROM posts
        WHERE slug = $1
        LIMIT 1`,
@@ -51,12 +51,22 @@ export async function PATCH(
            excerpt = COALESCE($4, excerpt),
            content = COALESCE($5, content),
            cover_url = COALESCE($6, cover_url),
-           published = COALESCE($7, published),
-           published_at = CASE WHEN $7 = TRUE AND published_at IS NULL THEN NOW() ELSE published_at END,
+           tags = COALESCE($7::jsonb, tags),
+           published = COALESCE($8, published),
+           published_at = CASE WHEN $8 = TRUE AND published_at IS NULL THEN NOW() ELSE published_at END,
            updated_at = NOW()
        WHERE slug = $1
-       RETURNING id, title, slug, excerpt, content, cover_url, published, published_at, created_at, updated_at`,
-      [slug, body.title ?? null, nextSlug, body.excerpt ?? null, body.content ?? null, body.coverUrl ?? null, body.published ?? null]
+       RETURNING id, title, slug, excerpt, content, cover_url, tags, published, published_at, created_at, updated_at`,
+      [
+        slug,
+        body.title ?? null,
+        nextSlug,
+        body.excerpt ?? null,
+        body.content ?? null,
+        body.coverUrl ?? null,
+        body.tags ? JSON.stringify(body.tags) : null,
+        body.published ?? null
+      ]
     );
 
     if (!result.rows[0]) {

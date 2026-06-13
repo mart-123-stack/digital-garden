@@ -1,9 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import aboutContent from "@/content/about.json";
+
+type AboutContent = typeof aboutContent;
+
+type AboutProfile = {
+  name: string;
+  title: string;
+  location: string;
+  bio: string;
+  avatar_url: string | null;
+  interests: unknown[];
+  experiences: unknown[];
+};
 
 function dispatchSpaceEvent(name: string, duration = 900, active?: boolean) {
   window.dispatchEvent(new CustomEvent(name, { detail: { duration, active } }));
@@ -68,7 +80,51 @@ function Lamppost({
   );
 }
 
-function AboutCopy({ isNight }: { isNight: boolean }) {
+function normalizeStringList(value: unknown[]): string[] {
+  return value.map((item) => String(item)).filter(Boolean);
+}
+
+function normalizeTimeline(value: unknown[]): AboutContent["timeline"] {
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const record = item as { label?: unknown; text?: unknown; title?: unknown; period?: unknown };
+      return {
+        label: String(record.label || record.period || record.title || "Now"),
+        text: String(record.text || record.title || "")
+      };
+    })
+    .filter((item): item is AboutContent["timeline"][number] => Boolean(item?.text));
+}
+
+function mapProfileToContent(profile: AboutProfile | null): AboutContent {
+  if (!profile) return aboutContent;
+
+  const intro = profile.bio
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+  const traits = normalizeStringList(profile.interests);
+  const timeline = normalizeTimeline(profile.experiences);
+
+  return {
+    eyebrow: profile.location || "Captain Station",
+    title: profile.title || `${profile.name || "Sylvie Chu"} 的宇宙驾驶舱`,
+    intro: intro.length > 0 ? intro : aboutContent.intro,
+    traits: traits.length > 0 ? traits : aboutContent.traits,
+    timeline: timeline.length > 0 ? timeline : aboutContent.timeline
+  };
+}
+
+function AboutCopy({
+  isNight,
+  content,
+  avatarUrl
+}: {
+  isNight: boolean;
+  content: AboutContent;
+  avatarUrl?: string | null;
+}) {
   return (
     <motion.section
       className={[
@@ -88,16 +144,28 @@ function AboutCopy({ isNight }: { isNight: boolean }) {
         variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
         className="text-[10px] uppercase tracking-[0.38em] text-comet/80"
       >
-        {aboutContent.eyebrow}
+        {content.eyebrow}
       </motion.p>
+      {avatarUrl ? (
+        <motion.div
+          variants={{ hidden: { opacity: 0, y: 12, scale: 0.92 }, show: { opacity: 1, y: 0, scale: 1 } }}
+          className={[
+            "mt-5 h-24 w-24 overflow-hidden rounded-[42%_58%_50%_50%] border shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_18px_45px_rgba(2,6,23,0.22)]",
+            isNight ? "border-amber-100/24 shadow-[0_0_40px_rgba(245,200,75,0.18)]" : "border-emerald-100/24"
+          ].join(" ")}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={avatarUrl} alt="Sylvie Chu 头像" className="h-full w-full object-cover" />
+        </motion.div>
+      ) : null}
       <motion.h1
         variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
         className={["mt-4 font-display text-4xl leading-tight sm:text-6xl", isNight ? "text-amber-100" : "text-starlight"].join(" ")}
       >
-        {aboutContent.title}
+        {content.title}
       </motion.h1>
       <div className="mt-6 space-y-4">
-        {aboutContent.intro.map((paragraph) => (
+        {content.intro.map((paragraph) => (
           <motion.p
             key={paragraph}
             variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } }}
@@ -111,7 +179,7 @@ function AboutCopy({ isNight }: { isNight: boolean }) {
         variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
         className="mt-7 flex flex-wrap gap-2"
       >
-        {aboutContent.traits.map((trait) => (
+        {content.traits.map((trait) => (
           <span
             key={trait}
             className="rounded-full border border-comet/18 bg-comet/8 px-3 py-1 text-xs text-comet/80"
@@ -121,7 +189,7 @@ function AboutCopy({ isNight }: { isNight: boolean }) {
         ))}
       </motion.div>
       <div className="mt-8 grid gap-3">
-        {aboutContent.timeline.map((item) => (
+        {content.timeline.map((item) => (
           <motion.div
             key={item.label}
             variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
@@ -143,6 +211,29 @@ export default function AboutPage() {
   const prefersReducedMotion = useReducedMotion();
   const [isNight, setIsNight] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [profile, setProfile] = useState<AboutProfile | null>(null);
+  const content = useMemo(() => mapProfileToContent(profile), [profile]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAbout() {
+      try {
+        const response = await fetch("/api/about", { cache: "no-store" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "无法读取 About");
+        if (!cancelled && data.about) setProfile(data.about);
+      } catch {
+        if (!cancelled) setProfile(null);
+      }
+    }
+
+    void loadAbout();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function toggleNight() {
     setIsNight((value) => !value);
@@ -218,7 +309,7 @@ export default function AboutPage() {
             点击路灯切换昼夜。白天适合介绍自己，夜晚适合承认那些安静但重要的心事。
           </motion.p>
         </div>
-        <AboutCopy isNight={isNight} />
+        <AboutCopy isNight={isNight} content={content} avatarUrl={profile?.avatar_url} />
       </section>
     </motion.main>
   );

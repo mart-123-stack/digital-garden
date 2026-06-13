@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AnimatePresence,
   motion,
@@ -11,6 +12,7 @@ import {
   useTransform
 } from "framer-motion";
 import { ContentEngagement } from "@/components/ContentEngagement";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 
 type Article = {
   id: string;
@@ -21,6 +23,7 @@ type Article = {
   content?: string;
   tint: string;
   status: string;
+  tags: string[];
   links: string[];
   patch: {
     left: string;
@@ -36,58 +39,12 @@ type PostApiRow = {
   excerpt: string;
   content?: string;
   cover_url?: string | null;
+  tags?: unknown;
   published?: boolean;
   published_at?: string | null;
   created_at?: string;
   updated_at?: string;
 };
-
-const fallbackArticles: Article[] = [
-  {
-    id: "rose-protocol",
-    title: "玫瑰协议：如何把日常经验写成可复访的星图",
-    date: "06.11",
-    category: "Garden Notes",
-    excerpt: "关于记录、回看、修剪和重新命名。每一篇文章都像一朵需要被驯养的玫瑰。",
-    tint: "rgba(251,113,133,0.54)",
-    status: "Evergreen",
-    links: ["写作系统", "复访", "标签花床"],
-    patch: { left: "31%", top: "48%", size: "h-28 w-40" }
-  },
-  {
-    id: "tiny-flight",
-    title: "微型飞船的驾驶手册：给注意力一个温柔的控制台",
-    date: "06.04",
-    category: "Interface",
-    excerpt: "交互不是按钮的堆叠，而是让读者知道自己正在哪里，准备去哪里。",
-    tint: "rgba(245,200,75,0.46)",
-    status: "Budding",
-    links: ["飞船光标", "动效手感", "导航"],
-    patch: { left: "53%", top: "35%", size: "h-24 w-36" }
-  },
-  {
-    id: "memory-clay",
-    title: "记忆的黏土质感：为什么数字花园不该像数据库",
-    date: "05.28",
-    category: "Essay",
-    excerpt: "如果知识有温度，它就不应该只以列表存在。它应该有地貌、天气和光。",
-    tint: "rgba(232,93,117,0.5)",
-    status: "Seedling",
-    links: ["知识地貌", "PKM", "材料感"],
-    patch: { left: "42%", top: "67%", size: "h-24 w-32" }
-  },
-  {
-    id: "quiet-map",
-    title: "安静地图：在过度通知的时代保留一片低噪声宇宙",
-    date: "05.16",
-    category: "Practice",
-    excerpt: "个人网站可以不是展示橱窗，而是飞船停靠、补给和重新校准方向的地方。",
-    tint: "rgba(255,214,231,0.46)",
-    status: "Tended",
-    links: ["低噪声", "个人空间", "数字花园"],
-    patch: { left: "63%", top: "57%", size: "h-20 w-36" }
-  }
-];
 
 const scrambleChars = "✦✧⋆01B612ROSE<>/{}[]*+-";
 const patchPresets = [
@@ -156,7 +113,13 @@ function formatDate(value?: string | null) {
   return `${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}`;
 }
 
+function normalizeTags(value: unknown): string[] {
+  return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : [];
+}
+
 function mapPostToArticle(post: PostApiRow, index: number): Article {
+  const tags = normalizeTags(post.tags);
+
   return {
     id: post.slug,
     title: post.title,
@@ -166,7 +129,8 @@ function mapPostToArticle(post: PostApiRow, index: number): Article {
     content: post.content,
     tint: tints[index % tints.length],
     status: post.published ? "Evergreen" : "Seedling",
-    links: ["Blog 星球", "Digital Garden"],
+    tags,
+    links: tags.length > 0 ? tags : ["Blog 星球", "Digital Garden"],
     patch: patchPresets[index % patchPresets.length]
   };
 }
@@ -303,18 +267,21 @@ function ArticleCard({
   article,
   index,
   onHover,
-  onOpen
+  onOpen,
+  onTag
 }: {
   article: Article;
   index: number;
   onHover: (id: string | null) => void;
   onOpen: (article: Article) => void;
+  onTag: (tag: string) => void;
 }) {
   const [hovered, setHovered] = useState(false);
 
   return (
-    <motion.button
-      type="button"
+    <motion.article
+      role="button"
+      tabIndex={0}
       onPointerEnter={() => {
         setHovered(true);
         onHover(article.id);
@@ -324,6 +291,12 @@ function ArticleCard({
         onHover(null);
       }}
       onClick={() => onOpen(article)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(article);
+        }
+      }}
       className="relative block w-full cursor-pointer overflow-hidden rounded-2xl border border-white/14 bg-white/[0.075] p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_16px_40px_rgba(20,4,18,0.24)]"
       initial={{ opacity: 0, y: 24, rotateX: 8 }}
       animate={{ opacity: 1, y: 0, rotateX: 0 }}
@@ -356,15 +329,20 @@ function ArticleCard({
           {article.status}
         </span>
         {article.links.map((link) => (
-          <span
+          <button
+            type="button"
             key={link}
-            className="rounded-full border border-rose-100/12 bg-rose-100/7 px-3 py-1 text-xs text-rose-100/56"
+            onClick={(event) => {
+              event.stopPropagation();
+              onTag(link);
+            }}
+            className="rounded-full border border-rose-100/12 bg-rose-100/7 px-3 py-1 text-xs text-rose-100/56 transition hover:border-rose-100/30 hover:text-rose-50"
           >
-            [[{link}]]
-          </span>
+            #{link}
+          </button>
         ))}
       </div>
-    </motion.button>
+    </motion.article>
   );
 }
 
@@ -378,13 +356,22 @@ function ArticleDetail({
   onClose: () => void;
 }) {
   return (
-    <motion.section
-      className="fixed inset-x-4 bottom-5 top-20 z-50 mx-auto flex max-w-4xl flex-col rounded-[1.7rem] border border-rose-100/20 bg-[#1e0b18]/86 p-5 text-left shadow-[0_30px_110px_rgba(20,4,18,0.65),inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-xl sm:p-6"
-      initial={{ opacity: 0, y: 42, scale: 0.94, filter: "blur(12px)" }}
-      animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-      exit={{ opacity: 0, y: 36, scale: 0.96, filter: "blur(12px)" }}
-      transition={{ type: "spring", stiffness: 130, damping: 18 }}
-    >
+    <>
+      <motion.div
+        aria-hidden="true"
+        className="fixed inset-0 z-40 bg-[#100610]/78 backdrop-blur-lg"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.22 }}
+      />
+      <motion.section
+        className="fixed inset-x-4 bottom-5 top-20 z-50 mx-auto flex max-w-4xl flex-col rounded-[1.7rem] border border-rose-100/24 bg-[#1b0815]/95 p-5 text-left shadow-[0_30px_110px_rgba(20,4,18,0.78),inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-xl sm:p-6"
+        initial={{ opacity: 0, y: 42, scale: 0.94, filter: "blur(12px)" }}
+        animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+        exit={{ opacity: 0, y: 36, scale: 0.96, filter: "blur(12px)" }}
+        transition={{ type: "spring", stiffness: 130, damping: 18 }}
+      >
       <div className="flex shrink-0 items-start justify-between gap-5 border-b border-white/10 pb-4">
         <div>
           <p className="text-[10px] uppercase tracking-[0.34em] text-comet/70">{article.category}</p>
@@ -399,34 +386,44 @@ function ArticleDetail({
           关闭
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto py-5 pr-1">
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-3xl bg-black/18 px-4 py-5 pr-3">
         {isLoading ? (
           <p className="text-sm text-starlight/50">正在穿过大气层读取正文...</p>
         ) : (
-          <pre className="whitespace-pre-wrap break-words font-sans text-base leading-8 text-starlight/72">
-            {article.content || "这篇文章还没有正文。可以去 /admin 写入 Markdown 后发布。"}
-          </pre>
+          <MarkdownRenderer content={article.content || "这篇文章还没有正文。可以去 /admin 写入 Markdown 后发布。"} />
         )}
         <ContentEngagement targetType="post" targetSlug={article.id} />
       </div>
       <div className="flex shrink-0 flex-wrap gap-2 border-t border-white/10 pt-4">
         {article.links.map((link) => (
-          <span key={link} className="rounded-full border border-rose-100/14 bg-rose-100/8 px-3 py-1 text-xs text-rose-100/60">
-            [[{link}]]
-          </span>
+          <Link
+            key={link}
+            href={`/tags/${encodeURIComponent(link)}`}
+            className="rounded-full border border-rose-100/14 bg-rose-100/8 px-3 py-1 text-xs text-rose-100/60 transition hover:border-rose-100/32 hover:text-rose-50"
+          >
+            #{link}
+          </Link>
         ))}
       </div>
-    </motion.section>
+      </motion.section>
+    </>
   );
 }
 
-export default function BlogPage() {
+function BlogPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const prefersReducedMotion = useReducedMotion();
   const [leaving, setLeaving] = useState(false);
   const [activeArticleId, setActiveArticleId] = useState<string | null>(null);
-  const [articles, setArticles] = useState<Article[]>(fallbackArticles);
-  const [sourceLabel, setSourceLabel] = useState("示例花田");
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [sourceLabel, setSourceLabel] = useState("数据库花田");
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get("search") || "");
+  const [activeTag, setActiveTag] = useState(searchParams.get("tag") || "");
+  const [page, setPage] = useState(Math.max(1, Number(searchParams.get("page") || 1)));
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalPosts, setTotalPosts] = useState(0);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const rawMouseX = useMotionValue(0.55);
@@ -450,20 +447,39 @@ export default function BlogPage() {
   }
 
   useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setPage(1);
+    }, 300);
+
+    return () => window.clearTimeout(handle);
+  }, [searchTerm]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadPosts() {
       try {
-        const response = await fetch("/api/posts?limit=24&award=read", { cache: "no-store" });
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: "6",
+          award: "read"
+        });
+        if (debouncedSearch) params.set("search", debouncedSearch);
+        if (activeTag) params.set("tag", activeTag);
+
+        const response = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "无法读取文章");
         const nextArticles = Array.isArray(data.posts) ? data.posts.map(mapPostToArticle) : [];
-        if (!cancelled && nextArticles.length > 0) {
+        if (!cancelled) {
           setArticles(nextArticles);
+          setTotalPages(Math.max(1, Number(data.totalPages || 1)));
+          setTotalPosts(Number(data.total || nextArticles.length));
           setSourceLabel("数据库花田");
         }
       } catch {
-        if (!cancelled) setSourceLabel("示例花田");
+        if (!cancelled) setSourceLabel("数据库暂未连接");
       }
     }
 
@@ -472,7 +488,7 @@ export default function BlogPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [activeTag, debouncedSearch, page]);
 
   async function openArticle(article: Article) {
     setSelectedArticle(article);
@@ -553,6 +569,29 @@ export default function BlogPage() {
               Digital garden mode: 草稿会发芽，成熟文章会常青，双链以 [[主题]] 形式露出。
               <span className="mt-2 block text-comet/62">当前数据源：{sourceLabel}</span>
             </p>
+            <div className="mt-4 grid gap-2">
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="搜索玫瑰、标题、正文"
+                className="w-full rounded-2xl border border-white/12 bg-white/8 px-4 py-3 text-sm text-starlight outline-none placeholder:text-starlight/32 focus:border-rose-100/30"
+              />
+              <div className="flex flex-wrap items-center gap-2 text-xs text-starlight/42">
+                <span>{totalPosts} 篇匹配文章</span>
+                {activeTag ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTag("");
+                      setPage(1);
+                    }}
+                    className="rounded-full border border-comet/24 bg-comet/10 px-3 py-1 text-comet"
+                  >
+                    清除 #{activeTag}
+                  </button>
+                ) : null}
+              </div>
+            </div>
           </div>
           <div className="mt-4 min-h-0 space-y-4 overflow-y-auto pr-1">
             {articles.map((article, index) => (
@@ -562,8 +601,56 @@ export default function BlogPage() {
                 index={index}
                 onHover={setActiveArticleId}
                 onOpen={openArticle}
+                onTag={(tag) => {
+                  setActiveTag(tag);
+                  setPage(1);
+                }}
               />
             ))}
+            {articles.length === 0 ? (
+              <div className="rounded-2xl border border-white/12 bg-black/20 p-5 text-sm leading-7 text-starlight/52">
+                {debouncedSearch || activeTag
+                  ? "没有找到匹配的玫瑰航迹。换个搜索词或清除标签试试。"
+                  : "还没有已发布的 Blog。进入 /admin 新建并发布 Markdown 后，玫瑰花田会从数据库里长出来。"}
+              </div>
+            ) : null}
+            {totalPages > 1 ? (
+              <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/12 bg-black/18 p-3">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={page <= 1}
+                  className="rounded-full border border-white/12 bg-white/8 px-4 py-2 text-xs text-starlight/64 disabled:opacity-35"
+                >
+                  上一页
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, index) => index + 1).map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setPage(item)}
+                      className={[
+                        "h-8 w-8 rounded-full border text-xs transition",
+                        item === page
+                          ? "border-rose-100/42 bg-rose-100/18 text-rose-50"
+                          : "border-white/10 bg-white/6 text-starlight/48"
+                      ].join(" ")}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                  disabled={page >= totalPages}
+                  className="rounded-full border border-white/12 bg-white/8 px-4 py-2 text-xs text-starlight/64 disabled:opacity-35"
+                >
+                  下一页
+                </button>
+              </div>
+            ) : null}
           </div>
         </motion.aside>
       </section>
@@ -577,5 +664,13 @@ export default function BlogPage() {
         ) : null}
       </AnimatePresence>
     </motion.main>
+  );
+}
+
+export default function BlogPage() {
+  return (
+    <Suspense fallback={<main className="relative z-10 min-h-dvh" />}>
+      <BlogPageContent />
+    </Suspense>
   );
 }

@@ -38,6 +38,39 @@ services:
     volumes:
       - uploads_data:/app/public/uploads
 
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["proxy"]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:-localhost}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  mcp-server:
+    build:
+      context: ./mcp
+      dockerfile: Dockerfile
+    ports:
+      - "3100:3100"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-garden}:${POSTGRES_PASSWORD:-garden_password}@db:5432/${POSTGRES_DB:-digital_garden}
+      PORT: 3100
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   uploads_data:
+  caddy_data:
+  caddy_config:

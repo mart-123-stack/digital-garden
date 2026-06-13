@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS posts (
   excerpt TEXT NOT NULL DEFAULT '',
   content TEXT NOT NULL,
   cover_url TEXT,
+  tags JSONB NOT NULL DEFAULT '[]'::jsonb,
   author_id UUID REFERENCES users(id) ON DELETE SET NULL,
   published BOOLEAN NOT NULL DEFAULT false,
   published_at TIMESTAMPTZ,
@@ -132,14 +133,25 @@ CREATE INDEX IF NOT EXISTS idx_game_scores_rank ON game_scores(game_id, score DE
 CREATE INDEX IF NOT EXISTS idx_points_user_day ON star_points_ledger(user_id, daily_bucket, action);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_provider_identity ON users(auth_provider, provider_id) WHERE provider_id IS NOT NULL;
 
-INSERT INTO about_profile (id, name, title, location, bio, interests, experiences)
+INSERT INTO about_profile (id, name, title, location, bio, avatar_url, interests, experiences)
 VALUES (
   1,
   'Sylvie Chu',
-  'Digital Garden Pilot',
-  'B-612 Orbit',
-  '一个在个人宇宙里整理文章、笔记、游戏和生活轨迹的数字花园主人。',
-  '["写作", "前端动画", "数字花园", "游戏化体验"]'::jsonb,
-  '[]'::jsonb
+  'Grade 1 · Data Science and Management Engineering',
+  'Zhejiang University · Hangzhou',
+  '你好！我是一名大数据专业的大一学生，目前正在探索编程世界的奥秘。
+
+这个博客是我记录学习笔记、项目经验和日常生活的地方。我目前主要在学习 C/C++、Python 和前端开发基础，希望能够通过不断地实践和总结，逐步成长为一名合格的程序员。
+
+课余时间我喜欢健身、摄影和阅读。如果你对博客内容有任何问题或建议，欢迎在评论区留言交流！
+
+## 学习目标
+
+- 打好计算机基础（数据结构、算法、操作系统）
+- 参与开源项目，积累实战经验
+- 建立自己的技术博客，记录成长过程',
+  '/uploads/sylvie-about-avatar.png',
+  '["C/C++", "Python", "HTML & CSS", "JavaScript", "Git & GitHub"]'::jsonb,
+  '[{"label":"2025 - 至今","text":"商务大数据分析 本科生 · Zhejiang University"}]'::jsonb
 )
 ON CONFLICT (id) DO NOTHING;

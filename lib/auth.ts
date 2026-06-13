@@ -23,6 +23,15 @@ type UserRow = {
 
 const COOKIE_NAME = "garden_session";
 
+function useSecureCookies() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (siteUrl) {
+    return siteUrl.startsWith("https://");
+  }
+
+  return process.env.NODE_ENV === "production";
+}
+
 function jwtSecret() {
   const secret = process.env.JWT_SECRET || "dev_only_change_me";
   return new TextEncoder().encode(secret);
@@ -104,7 +113,7 @@ export function attachSession(response: NextResponse, token: string) {
   response.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: useSecureCookies(),
     path: "/",
     maxAge: 60 * 60 * 24 * 7
   });
@@ -116,7 +125,7 @@ export function clearSession(response: NextResponse) {
   response.cookies.set(COOKIE_NAME, "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: useSecureCookies(),
     path: "/",
     maxAge: 0
   });

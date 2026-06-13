@@ -1,15 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { attachSession, requireUser, signSession } from "@/lib/auth";
 import { query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+
+type ProfileRow = {
+  id: string;
+  email: string;
+  name: string;
+  nickname: string;
+  avatar_url: string | null;
+  bio: string;
+  interests: string[];
+  role: "user" | "admin";
+  created_at: string;
+  updated_at: string;
+};
+
+async function profileResponse(profile: ProfileRow) {
+  const response = NextResponse.json({ profile });
+  attachSession(
+    response,
+    await signSession({
+      id: profile.id,
+      email: profile.email,
+      name: profile.name,
+      nickname: profile.nickname,
+      avatarUrl: profile.avatar_url,
+      role: profile.role
+    })
+  );
+
+  return response;
+}
 
 export async function GET(request: NextRequest) {
   const auth = await requireUser(request);
   if (auth.response) return auth.response;
 
   try {
-    const result = await query(
+    const result = await query<ProfileRow>(
       `SELECT id, email, name, nickname, avatar_url, bio, interests, role, created_at, updated_at
        FROM users
        WHERE id = $1
@@ -17,7 +47,7 @@ export async function GET(request: NextRequest) {
       [auth.user?.id]
     );
 
-    return NextResponse.json({ profile: result.rows[0] });
+    return profileResponse(result.rows[0]);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load profile";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -30,7 +60,7 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const result = await query(
+    const result = await query<ProfileRow>(
       `UPDATE users
        SET name = COALESCE($2, name),
            nickname = COALESCE($3, nickname),
@@ -50,7 +80,7 @@ export async function PATCH(request: NextRequest) {
       ]
     );
 
-    return NextResponse.json({ profile: result.rows[0] });
+    return profileResponse(result.rows[0]);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update profile";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -22,11 +22,11 @@ type GitHubEmail = {
 };
 
 function redirectTo(request: NextRequest, path: string) {
-  return new URL(path, request.url);
+  return new URL(path, process.env.NEXT_PUBLIC_SITE_URL || request.url);
 }
 
 async function exchangeCode(code: string, request: NextRequest) {
-  const callbackUrl = new URL("/api/auth/github/callback", process.env.NEXT_PUBLIC_SITE_URL || request.url);
+  const callbackUrl = redirectTo(request, "/api/auth/github/callback");
   const response = await fetch("https://github.com/login/oauth/access_token", {
     method: "POST",
     headers: {

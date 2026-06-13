@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { motion, useMotionValue, useSpring } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 
@@ -25,6 +25,25 @@ type StarPet = {
   name: string;
   level: number;
   xp: number;
+};
+
+type ProfileSnapshot = {
+  name: string;
+  nickname: string;
+  avatarUrl: string;
+  bio: string;
+  interests: string;
+};
+
+type ReactionRecord = {
+  target_type: "post" | "note";
+  target_slug: string;
+  reaction_type: "like" | "favorite";
+  created_at: string;
+  title: string;
+  summary: string;
+  cover_url?: string | null;
+  href: string;
 };
 
 const collectibleStars: CollectibleStar[] = [
@@ -244,6 +263,84 @@ function PetPanel({ pet }: { pet: StarPet }) {
   );
 }
 
+function WeeklyMissions({
+  todayPoints,
+  roseCount,
+  notesRead,
+  gameBest
+}: {
+  todayPoints: number;
+  roseCount: number;
+  notesRead: number;
+  gameBest: number;
+}) {
+  const missions = [
+    { label: "每日登录", current: Math.min(todayPoints, 10), total: 10, detail: "+10 xp" },
+    { label: "阅读花田/星环", current: Math.min(notesRead * 5, 20), total: 20, detail: "上限 +20 xp" },
+    { label: "收藏玫瑰", current: Math.min(roseCount * 5, 25), total: 25, detail: "给喜欢的文章做标记" },
+    { label: "刷新游戏纪录", current: gameBest > 0 ? 50 : 0, total: 50, detail: "破纪录 +50 xp" }
+  ];
+
+  return (
+    <section className="rounded-[1.5rem] border border-cyan-200/14 bg-white/[0.055] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_48px_rgba(2,6,23,0.22)] backdrop-blur-md">
+      <p className="text-[10px] uppercase tracking-[0.32em] text-cyan-100/58">Weekly Missions</p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {missions.map((mission) => {
+          const progress = Math.min(100, (mission.current / mission.total) * 100);
+          return (
+            <article key={mission.label} className="rounded-2xl border border-white/10 bg-black/16 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-starlight/78">{mission.label}</p>
+                <p className="text-xs text-comet/72">{mission.detail}</p>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-200 to-comet"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ type: "spring", stiffness: 120, damping: 18 }}
+                />
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function PetShop({ xp }: { xp: number }) {
+  const pets = [
+    { name: "星尘狐狸", cost: 120, tint: "from-orange-200 to-rose-300" },
+    { name: "月光鲸", cost: 260, tint: "from-cyan-200 to-blue-300" },
+    { name: "薄荷鹿", cost: 420, tint: "from-emerald-200 to-lime-300" }
+  ];
+
+  return (
+    <section className="rounded-[1.5rem] border border-yellow-200/16 bg-white/[0.055] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_48px_rgba(2,6,23,0.22)] backdrop-blur-md">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[10px] uppercase tracking-[0.32em] text-yellow-100/62">Pet Bazaar</p>
+        <p className="text-xs text-starlight/42">可用能量 {xp} xp</p>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        {pets.map((pet) => (
+          <article key={pet.name} className="rounded-2xl border border-white/10 bg-black/16 p-4 text-center">
+            <div className={`mx-auto h-16 w-16 rounded-[48%_52%_46%_54%] bg-gradient-to-br ${pet.tint} shadow-[inset_8px_9px_14px_rgba(255,255,255,0.28),inset_-12px_-14px_18px_rgba(15,23,42,0.22),0_0_26px_rgba(250,204,21,0.12)]`} />
+            <p className="mt-3 text-sm text-starlight/76">{pet.name}</p>
+            <button
+              type="button"
+              disabled={xp < pet.cost}
+              className="mt-3 rounded-full border border-yellow-100/18 bg-yellow-100/8 px-3 py-1 text-xs text-yellow-100/70 disabled:opacity-35"
+            >
+              {pet.cost} xp
+            </button>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ProfileEditor() {
   const { user, refresh } = useAuth();
   const [name, setName] = useState("");
@@ -253,6 +350,9 @@ function ProfileEditor() {
   const [interests, setInterests] = useState("");
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [snapshot, setSnapshot] = useState<ProfileSnapshot | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -268,10 +368,45 @@ function ProfileEditor() {
       setAvatarUrl(profile.avatar_url || "");
       setBio(profile.bio || "");
       setInterests(Array.isArray(profile.interests) ? profile.interests.join(", ") : "");
+      setSnapshot({
+        name: profile.name || "",
+        nickname: profile.nickname || "",
+        avatarUrl: profile.avatar_url || "",
+        bio: profile.bio || "",
+        interests: Array.isArray(profile.interests) ? profile.interests.join(", ") : ""
+      });
     }
 
     void loadProfile();
   }, [user]);
+
+  async function uploadAvatar(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setMessage("");
+    setIsUploadingAvatar(true);
+
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const response = await fetch("/api/upload", { method: "POST", body });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.error || "头像上传失败");
+        return;
+      }
+
+      setAvatarUrl(data.url);
+      setMessage("头像已上传，保存 Profile 后会同步到登录身份。");
+    } catch {
+      setMessage("无法连接头像上传服务");
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -301,6 +436,8 @@ function ProfileEditor() {
       }
 
       await refresh();
+      setSnapshot({ name, nickname, avatarUrl, bio, interests });
+      setIsEditing(false);
       setMessage("Profile 已保存");
     } catch {
       setMessage("无法连接 Profile 服务");
@@ -321,6 +458,53 @@ function ProfileEditor() {
             注册
           </Link>
         </div>
+      </section>
+    );
+  }
+
+  if (!isEditing) {
+    const display = snapshot || { name, nickname, avatarUrl, bio, interests };
+    const displayName = display.nickname || display.name || user.nickname || user.email;
+
+    return (
+      <section className="rounded-[1.5rem] border border-cyan-200/14 bg-white/[0.055] p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_48px_rgba(2,6,23,0.22)] backdrop-blur-md">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="relative h-20 w-20 overflow-hidden rounded-[32%_68%_55%_45%] border border-cyan-200/20 bg-cyan-200/8 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_0_28px_rgba(103,232,249,0.12)]">
+              {display.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={display.avatarUrl} alt="头像" className="h-full w-full object-cover" />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center font-display text-3xl text-cyan-100/70">
+                  {displayName.slice(0, 1).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.32em] text-cyan-100/58">Pilot Profile</p>
+              <h2 className="mt-2 font-display text-3xl text-starlight">{displayName}</h2>
+              <p className="mt-1 text-sm text-starlight/46">{user.email}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className="rounded-full border border-comet/35 bg-comet/14 px-5 py-2 text-xs uppercase tracking-[0.22em] text-comet"
+          >
+            编辑资料
+          </button>
+        </div>
+        <p className="mt-5 text-sm leading-7 text-starlight/58">{display.bio || "这位飞行员还没有写下自己的航行简介。"}</p>
+        {display.interests ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {display.interests.split(",").map((item) => item.trim()).filter(Boolean).map((item) => (
+              <span key={item} className="rounded-full border border-cyan-100/14 bg-cyan-100/8 px-3 py-1 text-xs text-cyan-100/64">
+                {item}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        {message ? <p className="mt-4 text-sm text-starlight/52">{message}</p> : null}
       </section>
     );
   }
@@ -352,14 +536,38 @@ function ProfileEditor() {
           />
         </label>
       </div>
-      <label className="mt-3 block text-xs uppercase tracking-[0.24em] text-starlight/42">
-        Avatar URL
-        <input
-          value={avatarUrl}
-          onChange={(event) => setAvatarUrl(event.target.value)}
-          className="mt-2 w-full rounded-2xl border border-white/12 bg-white/8 px-4 py-3 text-sm normal-case tracking-normal text-starlight outline-none focus:border-cyan-200/35"
-        />
-      </label>
+      <div className="mt-3 grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-end">
+        <div className="flex items-center gap-3">
+          <div className="relative h-20 w-20 overflow-hidden rounded-[32%_68%_55%_45%] border border-cyan-200/20 bg-cyan-200/8 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_0_28px_rgba(103,232,249,0.12)]">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="当前头像预览" className="h-full w-full object-cover" />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center font-display text-3xl text-cyan-100/70">
+                {(nickname || name || user.nickname || user.email).slice(0, 1).toUpperCase()}
+              </span>
+            )}
+          </div>
+          <label className="cursor-pointer rounded-full border border-cyan-200/24 bg-cyan-200/10 px-4 py-2 text-xs uppercase tracking-[0.2em] text-cyan-100 transition hover:bg-cyan-200/14">
+            {isUploadingAvatar ? "上传中" : "上传头像"}
+            <input
+              type="file"
+              accept="image/*"
+              disabled={isUploadingAvatar}
+              className="sr-only"
+              onChange={(event) => void uploadAvatar(event)}
+            />
+          </label>
+        </div>
+        <label className="block text-xs uppercase tracking-[0.24em] text-starlight/42">
+          Avatar URL
+          <input
+            value={avatarUrl}
+            onChange={(event) => setAvatarUrl(event.target.value)}
+            className="mt-2 w-full rounded-2xl border border-white/12 bg-white/8 px-4 py-3 text-sm normal-case tracking-normal text-starlight outline-none focus:border-cyan-200/35"
+          />
+        </label>
+      </div>
       <label className="mt-3 block text-xs uppercase tracking-[0.24em] text-starlight/42">
         Bio
         <textarea
@@ -386,9 +594,179 @@ function ProfileEditor() {
         >
           {isSaving ? "保存中" : "保存 Profile"}
         </button>
+        <button
+          type="button"
+          onClick={() => setIsEditing(false)}
+          className="rounded-full border border-white/12 bg-white/8 px-5 py-2 text-xs uppercase tracking-[0.22em] text-starlight/58"
+        >
+          取消
+        </button>
         {message ? <p className="text-sm text-starlight/52">{message}</p> : null}
       </div>
     </motion.form>
+  );
+}
+
+function ReactionArchive() {
+  const { user } = useAuth();
+  const [filter, setFilter] = useState<"all" | "like" | "favorite">("all");
+  const [items, setItems] = useState<ReactionRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    async function loadArchive() {
+      setIsLoading(true);
+      setMessage("");
+
+      try {
+        const suffix = filter === "all" ? "" : `?reactionType=${filter}`;
+        const response = await fetch(`/api/reactions${suffix}`, { cache: "no-store" });
+        const data = await response.json();
+
+        if (!response.ok) {
+          setMessage(data.error || "无法读取互动记录");
+          return;
+        }
+
+        if (!cancelled) setItems(data.items || []);
+      } catch {
+        if (!cancelled) setMessage("无法连接互动记录服务");
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+
+    void loadArchive();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filter, user]);
+
+  async function cancelReaction(item: ReactionRecord) {
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/reactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetType: item.target_type,
+          targetSlug: item.target_slug,
+          reactionType: item.reaction_type
+        })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.error || "取消失败");
+        return;
+      }
+
+      setItems((current) =>
+        current.filter(
+          (record) =>
+            !(
+              record.target_type === item.target_type &&
+              record.target_slug === item.target_slug &&
+              record.reaction_type === item.reaction_type
+            )
+        )
+      );
+      setMessage(item.reaction_type === "favorite" ? "已取消收藏" : "已取消点赞");
+    } catch {
+      setMessage("无法连接互动记录服务");
+    }
+  }
+
+  if (!user) return null;
+
+  return (
+    <section className="rounded-[1.5rem] border border-rose-200/16 bg-white/[0.055] p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_48px_rgba(2,6,23,0.22)] backdrop-blur-md">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.32em] text-rose-100/62">Rose Archive</p>
+          <h2 className="mt-2 font-display text-3xl text-starlight">点赞与收藏记录</h2>
+        </div>
+        <div className="flex rounded-full border border-white/12 bg-black/18 p-1">
+          {[
+            ["all", "全部"],
+            ["favorite", "收藏"],
+            ["like", "点赞"]
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setFilter(value as "all" | "like" | "favorite")}
+              className={[
+                "rounded-full px-3 py-1.5 text-xs transition",
+                filter === value ? "bg-rose-200/18 text-rose-50" : "text-starlight/45 hover:text-starlight/72"
+              ].join(" ")}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        {isLoading ? (
+          <p className="rounded-2xl border border-white/10 bg-black/16 p-4 text-sm text-starlight/48">
+            正在同步你的玫瑰航迹...
+          </p>
+        ) : null}
+        {!isLoading && items.length === 0 ? (
+          <p className="rounded-2xl border border-white/10 bg-black/16 p-4 text-sm leading-7 text-starlight/48">
+            这里还没有记录。去 Blog 星球给喜欢的文章点亮一朵玫瑰，它就会回到你的执照里。
+          </p>
+        ) : null}
+        {items.map((item) => (
+          <motion.article
+            key={`${item.target_type}-${item.target_slug}-${item.reaction_type}`}
+            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-black/18 p-4"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 140, damping: 18 }}
+          >
+            <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-rose-200 via-comet to-cyan-200 opacity-70" />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-rose-100/18 bg-rose-100/10 px-2.5 py-1 text-[11px] text-rose-50/70">
+                    {item.reaction_type === "favorite" ? "收藏" : "点赞"}
+                  </span>
+                  <span className="rounded-full border border-cyan-100/14 bg-cyan-100/8 px-2.5 py-1 text-[11px] text-cyan-50/58">
+                    {item.target_type === "post" ? "Blog" : "Notes"}
+                  </span>
+                </div>
+                <h3 className="mt-3 text-lg font-semibold text-starlight">{item.title}</h3>
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-starlight/48">{item.summary || "这条记录还没有摘要。"}</p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <Link
+                  href={item.href}
+                  className="rounded-full border border-cyan-200/22 bg-cyan-200/10 px-4 py-2 text-xs text-cyan-100 transition hover:bg-cyan-200/16"
+                >
+                  进入
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void cancelReaction(item)}
+                  className="rounded-full border border-rose-200/22 bg-rose-200/10 px-4 py-2 text-xs text-rose-100 transition hover:bg-rose-200/16"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </motion.article>
+        ))}
+      </div>
+      {message ? <p className="mt-4 text-sm text-starlight/52">{message}</p> : null}
+    </section>
   );
 }
 
@@ -522,6 +900,9 @@ export default function ProfilePage() {
         ) : null}
         <PetPanel pet={pet} />
         <ProfileEditor />
+        <ReactionArchive />
+        <WeeklyMissions todayPoints={todayPoints} roseCount={roseCount} notesRead={notesRead} gameBest={gameBest} />
+        <PetShop xp={xp} />
         <ActivityBento roseCount={roseCount} notesRead={notesRead} gameBest={gameBest} xp={xp} todayPoints={todayPoints} />
       </section>
     </motion.main>

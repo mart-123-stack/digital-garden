@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { getUserFromRequest, requireUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -8,12 +8,55 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const targetType = searchParams.get("targetType") || "post";
   const targetSlug = searchParams.get("targetSlug");
+  const reactionType = searchParams.get("reactionType");
 
   if (!targetSlug) {
-    return NextResponse.json({ error: "targetSlug is required" }, { status: 400 });
+    const auth = await requireUser(request);
+    if (auth.response) return auth.response;
+
+    try {
+      const params: unknown[] = [auth.user?.id];
+      const filters = ["r.user_id = $1"];
+
+      if (reactionType === "like" || reactionType === "favorite") {
+        params.push(reactionType);
+        filters.push(`r.reaction_type = $${params.length}`);
+      }
+
+      const result = await query(
+        `SELECT
+           r.target_type,
+           r.target_slug,
+           r.reaction_type,
+           r.created_at,
+           COALESCE(p.title, n.title, r.target_slug) AS title,
+           COALESCE(p.excerpt, n.summary, '') AS summary,
+           p.cover_url
+         FROM reactions r
+         LEFT JOIN posts p ON r.target_type = 'post' AND p.slug = r.target_slug
+         LEFT JOIN notes n ON r.target_type = 'note' AND n.slug = r.target_slug
+         WHERE ${filters.join(" AND ")}
+         ORDER BY r.created_at DESC`,
+        params
+      );
+
+      return NextResponse.json({
+        items: result.rows.map((item) => ({
+          ...item,
+          href:
+            item.target_type === "post"
+              ? `/blog/${item.target_slug}`
+              : `/notes?note=${item.target_slug}`
+        }))
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to load reactions";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
   }
 
   try {
+    const user = await getUserFromRequest(request);
     const result = await query(
       `SELECT reaction_type, COUNT(*)::int AS count
        FROM reactions
@@ -21,8 +64,19 @@ export async function GET(request: NextRequest) {
        GROUP BY reaction_type`,
       [targetType, targetSlug]
     );
+    const activeResult = user
+      ? await query<{ reaction_type: "like" | "favorite" }>(
+          `SELECT reaction_type
+           FROM reactions
+           WHERE target_type = $1 AND target_slug = $2 AND user_id = $3`,
+          [targetType, targetSlug, user.id]
+        )
+      : { rows: [] };
 
-    return NextResponse.json({ reactions: result.rows });
+    return NextResponse.json({
+      reactions: result.rows,
+      active: activeResult.rows.map((item) => item.reaction_type)
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load reactions";
     return NextResponse.json({ error: message }, { status: 500 });

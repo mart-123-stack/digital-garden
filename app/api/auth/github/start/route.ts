@@ -11,16 +11,29 @@ function safeNext(value: string | null) {
   return value;
 }
 
+function appUrl(request: NextRequest, path: string) {
+  return new URL(path, process.env.NEXT_PUBLIC_SITE_URL || request.url);
+}
+
+function useSecureCookies() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (siteUrl) return siteUrl.startsWith("https://");
+  return process.env.NODE_ENV === "production";
+}
+
 export async function GET(request: NextRequest) {
   const clientId = process.env.GITHUB_CLIENT_ID;
+  const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+  const next = safeNext(new URL(request.url).searchParams.get("next"));
 
-  if (!clientId) {
-    return NextResponse.json({ error: "GITHUB_CLIENT_ID is not configured" }, { status: 500 });
+  if (!clientId || !clientSecret) {
+    return NextResponse.redirect(
+      appUrl(request, `/login?next=${encodeURIComponent(next)}&error=github_oauth_not_configured`)
+    );
   }
 
   const state = randomBytes(24).toString("hex");
-  const next = safeNext(new URL(request.url).searchParams.get("next"));
-  const callbackUrl = new URL("/api/auth/github/callback", process.env.NEXT_PUBLIC_SITE_URL || request.url);
+  const callbackUrl = appUrl(request, "/api/auth/github/callback");
   const authorizeUrl = new URL("https://github.com/login/oauth/authorize");
 
   authorizeUrl.searchParams.set("client_id", clientId);
@@ -32,14 +45,14 @@ export async function GET(request: NextRequest) {
   response.cookies.set(STATE_COOKIE, state, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: useSecureCookies(),
     path: "/",
     maxAge: 60 * 10
   });
   response.cookies.set(NEXT_COOKIE, next, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: useSecureCookies(),
     path: "/",
     maxAge: 60 * 10
   });
