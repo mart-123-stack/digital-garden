@@ -164,6 +164,8 @@ export function ContentEngagement({
             onClick={() => void toggleReaction("like")}
             whileTap={{ scale: 0.92 }}
             aria-pressed={activeReactions.includes("like")}
+            aria-label={activeReactions.includes("like") ? `取消点赞，当前 ${counts.like} 个点赞` : `点赞，当前 ${counts.like} 个点赞`}
+            title={activeReactions.includes("like") ? "你已点赞，点击取消" : "点击点赞"}
             className={[
               "rounded-full border px-3 py-2 text-xs transition",
               activeReactions.includes("like")
@@ -171,13 +173,15 @@ export function ContentEngagement({
                 : "border-rose-100/16 bg-rose-100/8 text-rose-100/75"
             ].join(" ")}
           >
-            {activeReactions.includes("like") ? "已喜欢" : "喜欢"} {counts.like}
+            喜欢 {counts.like}
           </motion.button>
           <motion.button
             type="button"
             onClick={() => void toggleReaction("favorite")}
             whileTap={{ scale: 0.92 }}
             aria-pressed={activeReactions.includes("favorite")}
+            aria-label={activeReactions.includes("favorite") ? `取消收藏，当前 ${counts.favorite} 个收藏` : `收藏，当前 ${counts.favorite} 个收藏`}
+            title={activeReactions.includes("favorite") ? "你已收藏，点击取消" : "点击收藏"}
             className={[
               "rounded-full border px-3 py-2 text-xs transition",
               activeReactions.includes("favorite")
@@ -185,7 +189,7 @@ export function ContentEngagement({
                 : "border-comet/20 bg-comet/8 text-comet/80"
             ].join(" ")}
           >
-            {activeReactions.includes("favorite") ? "已收藏" : "收藏"} {counts.favorite}
+            收藏 {counts.favorite}
           </motion.button>
         </div>
       </div>
