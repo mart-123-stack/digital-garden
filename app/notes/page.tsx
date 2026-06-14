@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValue, useSpring } from "framer-motion";
 import { ContentEngagement } from "@/components/ContentEngagement";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 
 type NoteStatus = "seedling" | "budding" | "evergreen";
 
@@ -41,6 +42,14 @@ type NoteApiRow = {
 
 const MAX_RING_NOTES = 16;
 const clusters = ["All", "PKM", "Interface", "Writing", "Systems", "Life"] as const;
+const clusterLabels: Record<string, string> = {
+  All: "全部",
+  PKM: "知识管理",
+  Interface: "前端 / UI",
+  Writing: "写作输出",
+  Systems: "技术架构",
+  Life: "生活日常"
+};
 const statuses = ["all", "seedling", "budding", "evergreen"] as const;
 
 const rockShapes = [
@@ -251,7 +260,7 @@ function BentoPanel({ note, isLoading, onClose }: { note: Note; isLoading: boole
     <>
       <motion.div
         aria-hidden="true"
-        className="fixed inset-0 z-40 bg-slate-950/78 backdrop-blur-lg"
+        className="fixed inset-0 z-40 bg-[rgba(2,6,23,0.78)] backdrop-blur-lg"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -259,22 +268,24 @@ function BentoPanel({ note, isLoading, onClose }: { note: Note; isLoading: boole
       />
       <motion.section
         key={note.id}
-        className="fixed inset-x-5 bottom-5 top-24 z-50 mx-auto flex max-w-5xl flex-col overflow-hidden rounded-[1.7rem] border border-white/20 bg-slate-950/94 p-4 text-left shadow-[0_24px_90px_rgba(2,6,23,0.72),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl sm:p-5 lg:top-20"
+        className="fixed inset-x-5 bottom-5 top-24 z-50 mx-auto flex max-w-5xl flex-col overflow-hidden rounded-[1.7rem] border border-white/20 bg-[rgba(2,6,23,0.96)] p-4 text-left shadow-[0_24px_90px_rgba(2,6,23,0.72),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl sm:p-5 lg:top-20"
         initial={{ opacity: 0, scale: 0.72, y: 80, filter: "blur(12px)" }}
         animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
         exit={{ opacity: 0, scale: 0.78, y: 60, filter: "blur(12px)" }}
         transition={{ type: "spring", stiffness: 130, damping: 18, mass: 0.9 }}
       >
-      <button
-        type="button"
-        onClick={onClose}
-        className="mb-4 rounded-full border border-white/16 bg-white/8 px-4 py-2 text-xs uppercase tracking-[0.22em] text-comet/80"
-      >
-        返回星环
-      </button>
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+      <div className="flex shrink-0 items-center justify-end border-b border-white/10 pb-4">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full border border-white/16 bg-white/8 px-4 py-2 text-xs uppercase tracking-[0.22em] text-comet/80"
+        >
+          返回星环
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto pt-4 pr-1">
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <article className="rounded-3xl border border-white/12 bg-black/18 p-6">
+        <article className="rounded-3xl border border-white/12 bg-black/35 p-6">
           <p className="text-[10px] uppercase tracking-[0.36em] text-comet/70">Flattened Fragment</p>
           <h1 className="mt-4 font-display text-4xl leading-tight text-starlight sm:text-6xl">
             {note.title}
@@ -285,9 +296,9 @@ function BentoPanel({ note, isLoading, onClose }: { note: Note; isLoading: boole
               正在解析这块知识碎片的晶体脉络...
             </p>
           ) : note.content ? (
-            <pre className="mt-6 max-h-72 overflow-y-auto whitespace-pre-wrap break-words border-t border-white/10 pt-5 font-sans text-sm leading-7 text-starlight/60">
-              {note.content}
-            </pre>
+            <div className="mt-6 border-t border-white/10 pt-5">
+              <MarkdownRenderer content={note.content} />
+            </div>
           ) : (
             <p className="mt-6 rounded-2xl border border-white/10 bg-white/[0.05] p-4 text-sm leading-7 text-starlight/45">
               这块碎片还没有正文。可以在 /admin 里继续给它嫁接 Markdown 内容。
@@ -299,7 +310,7 @@ function BentoPanel({ note, isLoading, onClose }: { note: Note; isLoading: boole
           <ContentEngagement targetType="note" targetSlug={note.id} />
         </article>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-          <div className="rounded-3xl border border-white/12 bg-white/[0.07] p-5">
+          <div className="rounded-3xl border border-white/12 bg-white/[0.10] p-5">
             <p className="text-xs uppercase tracking-[0.28em] text-starlight/44">Tags</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {note.tags.map((tag) => (
@@ -309,7 +320,7 @@ function BentoPanel({ note, isLoading, onClose }: { note: Note; isLoading: boole
               ))}
             </div>
           </div>
-          <div className="rounded-3xl border border-white/12 bg-white/[0.07] p-5">
+          <div className="rounded-3xl border border-white/12 bg-white/[0.10] p-5">
             <p className="text-xs uppercase tracking-[0.28em] text-starlight/44">Linked Notes</p>
             <div className="mt-4 space-y-2">
               {note.links.map((link) => (
@@ -352,7 +363,7 @@ export default function NotesPage() {
 
       return clusterMatches && statusMatches && queryMatches;
     });
-  }, [activeCluster, activeStatus, query]);
+  }, [notes, activeCluster, activeStatus, query]);
   const visibleNotes = useMemo(() => layoutNotes(filteredNotes), [filteredNotes]);
 
   useEffect(() => {
@@ -364,9 +375,9 @@ export default function NotesPage() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "无法读取笔记");
         const nextNotes = Array.isArray(data.notes) ? data.notes.map(mapApiNote) : [];
-        if (!cancelled && nextNotes.length > 0) {
+        if (!cancelled) {
           setNotes(nextNotes);
-          setSourceLabel("数据库星环");
+          setSourceLabel(`数据库星环（${nextNotes.length} 个已发布碎片）`);
         }
       } catch {
         if (!cancelled) setSourceLabel("数据库暂未连接");
@@ -459,7 +470,7 @@ export default function NotesPage() {
                       : "border-white/12 bg-white/6 text-starlight/54"
                   ].join(" ")}
                 >
-                  {cluster}
+                  {clusterLabels[cluster]}
                 </button>
               ))}
             </div>
