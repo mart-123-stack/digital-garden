@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     await mkdir(uploadDir, { recursive: true });
     await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
 
-    const url = `/uploads/${fileName}?v=${Date.now()}`;
+    const url = `/api/uploads/${fileName}`;
 
     if (auth.user?.id && auth.user.id !== "admin") {
       await query(
