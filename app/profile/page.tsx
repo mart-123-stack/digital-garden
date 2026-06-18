@@ -382,11 +382,67 @@ function WeeklyMissions({
   );
 }
 
+function StarPetCreature({ variant }: { variant: "fox" | "whale" | "deer" }) {
+  const isFox = variant === "fox";
+  const isWhale = variant === "whale";
+
+  return (
+    <motion.div
+      className="relative mx-auto h-24 w-24"
+      aria-hidden="true"
+      whileHover={{ y: -6, rotate: isFox ? -4 : isWhale ? 3 : 0 }}
+      transition={{ type: "spring", stiffness: 240, damping: 16 }}
+    >
+      <span className="absolute bottom-1 left-1/2 h-4 w-16 -translate-x-1/2 rounded-full bg-cyan-950/50 blur-sm" />
+      {isFox ? (
+        <div className="absolute inset-0">
+          <span className="absolute left-7 top-4 h-7 w-5 -rotate-12 rounded-[70%_30%_65%_35%] bg-orange-200 shadow-[inset_4px_5px_8px_rgba(255,255,255,0.4),inset_-5px_-6px_8px_rgba(154,52,18,0.28)]" />
+          <span className="absolute right-7 top-4 h-7 w-5 rotate-12 rounded-[30%_70%_35%_65%] bg-orange-200 shadow-[inset_4px_5px_8px_rgba(255,255,255,0.4),inset_-5px_-6px_8px_rgba(154,52,18,0.28)]" />
+          <span className="absolute left-5 top-7 h-12 w-14 rounded-[46%_54%_58%_42%] bg-[radial-gradient(circle_at_34%_24%,rgba(255,255,255,0.84),transparent_0_17%),linear-gradient(135deg,#fed7aa,#fb7185)] shadow-[inset_8px_9px_13px_rgba(255,255,255,0.32),inset_-10px_-12px_16px_rgba(127,29,29,0.24),0_0_24px_rgba(251,113,133,0.22)]" />
+          <span className="absolute right-1 top-10 h-9 w-14 rotate-12 rounded-[70%_30%_65%_35%] bg-gradient-to-r from-orange-300 via-rose-300 to-yellow-100 shadow-[inset_5px_5px_9px_rgba(255,255,255,0.28),0_0_18px_rgba(251,146,60,0.2)]" />
+          <span className="absolute left-9 top-11 h-2 w-2 rounded-full bg-slate-950/76" />
+          <span className="absolute right-9 top-11 h-2 w-2 rounded-full bg-slate-950/76" />
+          <span className="absolute left-1/2 top-[3.45rem] h-1.5 w-5 -translate-x-1/2 rounded-full bg-slate-950/34" />
+          <span className="absolute bottom-4 left-8 h-4 w-3 rounded-full bg-orange-500/70" />
+          <span className="absolute bottom-4 right-9 h-4 w-3 rounded-full bg-rose-500/70" />
+        </div>
+      ) : isWhale ? (
+        <div className="absolute inset-0">
+          <span className="absolute left-1/2 top-0 h-8 w-1 -translate-x-1/2 rounded-full bg-cyan-100/55 shadow-[0_0_12px_rgba(165,243,252,0.65)]" />
+          <span className="absolute left-[2.15rem] top-2 h-3 w-3 rounded-full border-t border-cyan-100/50" />
+          <span className="absolute right-[2.15rem] top-2 h-3 w-3 rounded-full border-t border-cyan-100/50" />
+          <span className="absolute left-4 top-8 h-12 w-16 rounded-[58%_42%_52%_48%] bg-[radial-gradient(circle_at_34%_24%,rgba(255,255,255,0.82),transparent_0_17%),linear-gradient(135deg,#bae6fd,#38bdf8_58%,#2563eb)] shadow-[inset_9px_10px_14px_rgba(255,255,255,0.3),inset_-12px_-14px_18px_rgba(30,64,175,0.32),0_0_26px_rgba(56,189,248,0.2)]" />
+          <span className="absolute left-2 top-12 h-5 w-8 -rotate-12 rounded-full bg-blue-300 shadow-[inset_4px_4px_8px_rgba(255,255,255,0.28)]" />
+          <span className="absolute right-3 top-10 h-8 w-9 rotate-12 rounded-[35%_65%_45%_55%] bg-cyan-200 shadow-[inset_4px_4px_8px_rgba(255,255,255,0.32),0_0_14px_rgba(165,243,252,0.22)]" />
+          <span className="absolute left-9 top-12 h-2 w-2 rounded-full bg-slate-950/72" />
+          <span className="absolute left-[3.15rem] top-[3.35rem] h-1.5 w-5 rounded-full bg-slate-950/30" />
+          <span className="absolute bottom-4 right-8 h-3 w-5 rounded-full bg-blue-500/70" />
+        </div>
+      ) : (
+        <div className="absolute inset-0">
+          <span className="absolute left-7 top-2 h-8 w-1 -rotate-[24deg] rounded-full bg-emerald-100/75 shadow-[0_0_10px_rgba(167,243,208,0.5)]" />
+          <span className="absolute right-7 top-2 h-8 w-1 rotate-[24deg] rounded-full bg-emerald-100/75 shadow-[0_0_10px_rgba(167,243,208,0.5)]" />
+          <span className="absolute left-5 top-3 h-1 w-4 -rotate-[28deg] rounded-full bg-emerald-100/70" />
+          <span className="absolute right-5 top-3 h-1 w-4 rotate-[28deg] rounded-full bg-emerald-100/70" />
+          <span className="absolute left-7 top-7 h-14 w-12 rounded-[48%_52%_44%_56%] bg-[radial-gradient(circle_at_36%_24%,rgba(255,255,255,0.82),transparent_0_18%),linear-gradient(135deg,#d9f99d,#6ee7b7_58%,#059669)] shadow-[inset_8px_9px_13px_rgba(255,255,255,0.34),inset_-11px_-13px_16px_rgba(6,95,70,0.3),0_0_24px_rgba(110,231,183,0.22)]" />
+          <span className="absolute left-5 top-12 h-6 w-6 -rotate-12 rounded-full bg-lime-200 shadow-[inset_3px_4px_7px_rgba(255,255,255,0.34)]" />
+          <span className="absolute right-5 top-12 h-6 w-6 rotate-12 rounded-full bg-emerald-200 shadow-[inset_3px_4px_7px_rgba(255,255,255,0.34)]" />
+          <span className="absolute left-10 top-12 h-2 w-2 rounded-full bg-slate-950/72" />
+          <span className="absolute right-10 top-12 h-2 w-2 rounded-full bg-slate-950/72" />
+          <span className="absolute left-1/2 top-[3.55rem] h-1.5 w-4 -translate-x-1/2 rounded-full bg-slate-950/28" />
+          <span className="absolute bottom-3 left-9 h-5 w-2 rounded-full bg-emerald-600/70" />
+          <span className="absolute bottom-3 right-9 h-5 w-2 rounded-full bg-emerald-600/70" />
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 function PetShop({ xp }: { xp: number }) {
   const pets = [
-    { name: "星尘狐狸", cost: 120, tint: "from-orange-200 to-rose-300" },
-    { name: "月光鲸", cost: 260, tint: "from-cyan-200 to-blue-300" },
-    { name: "薄荷鹿", cost: 420, tint: "from-emerald-200 to-lime-300" }
+    { name: "星尘狐狸", cost: 120, variant: "fox" as const, note: "会把收藏文章叼回窝里" },
+    { name: "月光鲸", cost: 260, variant: "whale" as const, note: "路过 Notes 星环时会喷水标记" },
+    { name: "薄荷鹿", cost: 420, variant: "deer" as const, note: "适合安静陪你巡航" }
   ];
 
   return (
@@ -397,9 +453,10 @@ function PetShop({ xp }: { xp: number }) {
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         {pets.map((pet) => (
-          <article key={pet.name} className="rounded-2xl border border-white/10 bg-black/16 p-4 text-center">
-            <div className={`mx-auto h-16 w-16 rounded-[48%_52%_46%_54%] bg-gradient-to-br ${pet.tint} shadow-[inset_8px_9px_14px_rgba(255,255,255,0.28),inset_-12px_-14px_18px_rgba(15,23,42,0.22),0_0_26px_rgba(250,204,21,0.12)]`} />
+          <article key={pet.name} className="rounded-2xl border border-white/10 bg-black/16 p-4 text-center transition hover:border-yellow-100/24 hover:bg-yellow-100/[0.055]">
+            <StarPetCreature variant={pet.variant} />
             <p className="mt-3 text-sm text-starlight/76">{pet.name}</p>
+            <p className="mt-2 min-h-10 text-xs leading-5 text-starlight/42">{pet.note}</p>
             <button
               type="button"
               disabled={xp < pet.cost}
