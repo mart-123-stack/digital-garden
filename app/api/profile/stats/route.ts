@@ -14,6 +14,7 @@ type PetRow = {
   name: string;
   level: number;
   xp: number;
+  owned_species: string[] | null;
 };
 
 type ActivityRow = {
@@ -38,13 +39,13 @@ export async function GET(request: NextRequest) {
       query<StatsRow>(
         `SELECT
            COALESCE(SUM(points), 0)::text AS total_points,
-           COALESCE(SUM(points) FILTER (WHERE daily_bucket = CURRENT_DATE), 0)::text AS today_points
+           COALESCE(SUM(points) FILTER (WHERE daily_bucket = CURRENT_DATE AND points > 0), 0)::text AS today_points
          FROM star_points_ledger
          WHERE user_id = $1`,
         [auth.user!.id]
       ),
       query<PetRow>(
-        `SELECT species, name, level, xp
+        `SELECT species, name, level, xp, owned_species
          FROM pets
          WHERE user_id = $1
          LIMIT 1`,
@@ -77,7 +78,8 @@ export async function GET(request: NextRequest) {
         species: "egg",
         name: "未孵化的星际蛋",
         level: 1,
-        xp: 0
+        xp: 0,
+        owned_species: []
       }
     });
   } catch (error) {

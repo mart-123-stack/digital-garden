@@ -25,6 +25,7 @@ type StarPet = {
   name: string;
   level: number;
   xp: number;
+  owned_species?: string[];
 };
 
 type ProfileSnapshot = {
@@ -80,6 +81,11 @@ function resolveUploadUrl(url: string | null | undefined) {
   if (!url) return "";
   if (url.startsWith("/uploads/")) return url.replace(/^\/uploads\//, "/api/uploads/");
   return url;
+}
+
+function petVariantForSpecies(species: string): "fox" | "whale" | "deer" | null {
+  if (species === "fox" || species === "whale" || species === "deer") return species;
+  return null;
 }
 
 function PilotLicenseCard({
@@ -227,6 +233,7 @@ function PetPanel({ pet }: { pet: StarPet }) {
   const [mood, setMood] = useState<"curious" | "happy" | "sleepy">("curious");
   const progress = Math.min(100, pet.xp % 100);
   const isEgg = pet.species === "egg";
+  const activeVariant = petVariantForSpecies(pet.species);
   const moodText = {
     curious: "正在观察你的航线",
     happy: "星糖能量补充完毕",
@@ -277,6 +284,8 @@ function PetPanel({ pet }: { pet: StarPet }) {
                 <span className="absolute bottom-[-5px] left-5 h-4 w-5 rounded-full bg-amber-600/60" />
                 <span className="absolute bottom-[-5px] right-5 h-4 w-5 rounded-full bg-amber-600/60" />
               </div>
+            ) : activeVariant ? (
+              <StarPetCreature variant={activeVariant} />
             ) : (
               <div className="absolute inset-0">
                 <span className="absolute left-3 top-2 h-10 w-8 -rotate-12 rounded-[70%_30%_65%_35%] bg-cyan-200 shadow-[inset_4px_5px_8px_rgba(255,255,255,0.38),inset_-5px_-6px_10px_rgba(14,116,144,0.28)]" />
@@ -438,7 +447,17 @@ function StarPetCreature({ variant }: { variant: "fox" | "whale" | "deer" }) {
   );
 }
 
-function PetShop({ xp }: { xp: number }) {
+function PetShop({
+  xp,
+  activeSpecies,
+  ownedSpecies,
+  onBuyOrSelect
+}: {
+  xp: number;
+  activeSpecies: string;
+  ownedSpecies: string[];
+  onBuyOrSelect: (species: "fox" | "whale" | "deer", action: "buy" | "select") => void;
+}) {
   const pets = [
     { name: "星尘狐狸", cost: 120, variant: "fox" as const, note: "会把收藏文章叼回窝里" },
     { name: "月光鲸", cost: 260, variant: "whale" as const, note: "路过 Notes 星环时会喷水标记" },
@@ -452,20 +471,33 @@ function PetShop({ xp }: { xp: number }) {
         <p className="text-xs text-starlight/42">可用能量 {xp} xp</p>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        {pets.map((pet) => (
-          <article key={pet.name} className="rounded-2xl border border-white/10 bg-black/16 p-4 text-center transition hover:border-yellow-100/24 hover:bg-yellow-100/[0.055]">
-            <StarPetCreature variant={pet.variant} />
-            <p className="mt-3 text-sm text-starlight/76">{pet.name}</p>
-            <p className="mt-2 min-h-10 text-xs leading-5 text-starlight/42">{pet.note}</p>
-            <button
-              type="button"
-              disabled={xp < pet.cost}
-              className="mt-3 rounded-full border border-yellow-100/18 bg-yellow-100/8 px-3 py-1 text-xs text-yellow-100/70 disabled:opacity-35"
+        {pets.map((pet) => {
+          const isOwned = ownedSpecies.includes(pet.variant);
+          const isActive = activeSpecies === pet.variant;
+          const action = isOwned ? "select" : "buy";
+
+          return (
+            <article
+              key={pet.name}
+              className={[
+                "rounded-2xl border bg-black/16 p-4 text-center transition hover:border-yellow-100/24 hover:bg-yellow-100/[0.055]",
+                isActive ? "border-yellow-100/32 shadow-[0_0_28px_rgba(250,204,21,0.12)]" : "border-white/10"
+              ].join(" ")}
             >
-              {pet.cost} xp
-            </button>
-          </article>
-        ))}
+              <StarPetCreature variant={pet.variant} />
+              <p className="mt-3 text-sm text-starlight/76">{pet.name}</p>
+              <p className="mt-2 min-h-10 text-xs leading-5 text-starlight/42">{pet.note}</p>
+              <button
+                type="button"
+                disabled={isActive || (!isOwned && xp < pet.cost)}
+                onClick={() => onBuyOrSelect(pet.variant, action)}
+                className="mt-3 rounded-full border border-yellow-100/18 bg-yellow-100/8 px-3 py-1 text-xs text-yellow-100/70 disabled:opacity-35"
+              >
+                {isActive ? "当前伙伴" : isOwned ? "设为伙伴" : `${pet.cost} xp`}
+              </button>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
@@ -908,11 +940,14 @@ export default function ProfilePage() {
   const [notesRead, setNotesRead] = useState(0);
   const [gameBest, setGameBest] = useState(0);
   const [todayPoints, setTodayPoints] = useState(0);
+  const [petMessage, setPetMessage] = useState("");
+  const [isPetUpdating, setIsPetUpdating] = useState(false);
   const [pet, setPet] = useState<StarPet>({
     species: "egg",
     name: "未孵化的星际蛋",
     level: 1,
-    xp: 0
+    xp: 0,
+    owned_species: []
   });
   const [collected, setCollected] = useState<string[]>([]);
 
@@ -974,6 +1009,38 @@ export default function ProfilePage() {
     window.localStorage.setItem("profile:xp", String(nextXp));
   }
 
+  async function buyOrSelectPet(species: "fox" | "whale" | "deer", action: "buy" | "select") {
+    if (!user) {
+      setPetMessage("登录后才能购买和选择星际宠物。");
+      return;
+    }
+
+    setPetMessage("");
+    setIsPetUpdating(true);
+
+    try {
+      const response = await fetch("/api/profile/pet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ species, action })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setPetMessage(data.error === "Not enough star points" ? "星际能量不足，还不能兑换这只宠物。" : data.error || "宠物同步失败");
+        return;
+      }
+
+      setPet(data.pet as StarPet);
+      setXp(Number(data.balance || 0));
+      setPetMessage(action === "buy" ? "兑换成功，星际蛋已经孵化成新的伙伴。" : "已切换当前星际伙伴。");
+    } catch {
+      setPetMessage("无法连接宠物商店。");
+    } finally {
+      setIsPetUpdating(false);
+    }
+  }
+
   return (
     <motion.main
       className="relative z-10 min-h-dvh overflow-hidden px-5 py-6 text-starlight sm:px-8 lg:px-12"
@@ -1032,7 +1099,21 @@ export default function ProfilePage() {
         <ProfileEditor />
         <ReactionArchive />
         <WeeklyMissions todayPoints={todayPoints} roseCount={roseCount} notesRead={notesRead} gameBest={gameBest} />
-        <PetShop xp={xp} />
+        <div className="space-y-3">
+          <PetShop
+            xp={xp}
+            activeSpecies={pet.species}
+            ownedSpecies={pet.owned_species || []}
+            onBuyOrSelect={(species, action) => {
+              if (!isPetUpdating) void buyOrSelectPet(species, action);
+            }}
+          />
+          {petMessage ? (
+            <p className="rounded-2xl border border-yellow-100/14 bg-yellow-100/8 px-4 py-3 text-sm text-yellow-50/68">
+              {petMessage}
+            </p>
+          ) : null}
+        </div>
         <ActivityBento roseCount={roseCount} notesRead={notesRead} gameBest={gameBest} xp={xp} todayPoints={todayPoints} />
       </section>
     </motion.main>
