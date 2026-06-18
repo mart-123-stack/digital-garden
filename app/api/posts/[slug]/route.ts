@@ -31,6 +31,27 @@ export async function GET(
   }
 }
 
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const auth = await requireAdmin(_request);
+  if (auth.response) return auth.response;
+
+  const { slug } = await params;
+
+  try {
+    const result = await query("DELETE FROM posts WHERE slug = $1 RETURNING id", [slug]);
+    if (!result.rows[0]) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+    return NextResponse.json({ deleted: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to delete post";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }

@@ -21,6 +21,12 @@ function dispatchSpaceEvent(name: string, duration = 900, active?: boolean) {
   window.dispatchEvent(new CustomEvent(name, { detail: { duration, active } }));
 }
 
+function resolveUploadUrl(url: string | null | undefined) {
+  if (!url) return "";
+  if (url.startsWith("/uploads/")) return url.replace(/^\/uploads\//, "/api/uploads/");
+  return url;
+}
+
 function Bench({ isNight }: { isNight: boolean }) {
   return (
     <div
@@ -155,7 +161,7 @@ function AboutCopy({
           ].join(" ")}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={avatarUrl} alt="Sylvie Chu 头像" className="h-full w-full object-cover" />
+          <img src={resolveUploadUrl(avatarUrl)} alt="Sylvie Chu 头像" className="h-full w-full object-cover" />
         </motion.div>
       ) : null}
       <motion.h1

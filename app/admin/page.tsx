@@ -61,6 +61,13 @@ const emptyAboutForm: AboutForm = {
   experiences: ""
 };
 
+function defaultFormForMode(mode: ContentMode): EditorForm {
+  return {
+    ...emptyForm,
+    published: mode === "note"
+  };
+}
+
 function normalizeList(payload: unknown, mode: ContentMode): ContentItem[] {
   if (!payload || typeof payload !== "object") return [];
   const value = mode === "post" ? (payload as { posts?: ContentItem[] }).posts : (payload as { notes?: ContentItem[] }).notes;
@@ -78,6 +85,12 @@ function parseCsv(value: string) {
     .filter(Boolean);
 }
 
+function resolveUploadUrl(url: string | null | undefined) {
+  if (!url) return "";
+  if (url.startsWith("/uploads/")) return url.replace(/^\/uploads\//, "/api/uploads/");
+  return url;
+}
+
 export default function AdminPage() {
   const { user, isLoading } = useAuth();
   const [mode, setMode] = useState<ContentMode>("post");
@@ -87,6 +100,7 @@ export default function AdminPage() {
   const [activeSlug, setActiveSlug] = useState("");
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const contentRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -143,7 +157,7 @@ export default function AdminPage() {
   function switchMode(nextMode: ContentMode) {
     setMode(nextMode);
     setItems([]);
-    setForm(emptyForm);
+    setForm(defaultFormForMode(nextMode));
     setActiveSlug("");
     setMessage("");
   }
@@ -219,8 +233,8 @@ export default function AdminPage() {
 
   function newDraft() {
     setActiveSlug("");
-    setForm(emptyForm);
-    setMessage("新的草稿舱已经清空。");
+    setForm(defaultFormForMode(mode));
+    setMessage(mode === "note" ? "新的 Notes 碎片已清空，默认会发布到星环。" : "新的草稿舱已经清空。");
   }
 
   async function uploadImage(file: File) {
@@ -312,12 +326,41 @@ export default function AdminPage() {
       const saved = mode === "post" ? data.post : data.note;
       setActiveSlug(saved.slug);
       setForm((current) => ({ ...current, slug: saved.slug, published: Boolean(saved.published) }));
-      setMessage(form.published ? "已发布到星图。" : "草稿已保存。");
+      setMessage(
+        form.published
+          ? "已发布到星图。"
+          : mode === "note"
+            ? "Notes 草稿已保存，但不会出现在 Notes 星球；勾选“发布到公开宇宙”后再保存即可显示。"
+            : "草稿已保存。"
+      );
       await loadList(mode);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "保存失败");
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function deleteContent() {
+    if (!activeSlug) return;
+    setIsDeleting(true);
+    setMessage("");
+
+    try {
+      const endpoint = mode === "post" ? "posts" : "notes";
+      const response = await fetch(`/api/${endpoint}/${activeSlug}`, { method: "DELETE" });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "删除失败");
+      }
+      setActiveSlug("");
+      setForm(defaultFormForMode(mode));
+      setMessage("已从宇宙中移除。");
+      await loadList(mode);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "删除失败");
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -461,6 +504,20 @@ export default function AdminPage() {
               >
                 {isSaving ? "保存中" : mode === "about" ? "保存绿色星球" : form.published ? "发布" : "保存草稿"}
               </button>
+              {mode !== "about" && activeSlug ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`确定删除「${form.title || activeSlug}」？此操作不可撤销。`)) {
+                      void deleteContent();
+                    }
+                  }}
+                  disabled={isDeleting}
+                  className="rounded-full border border-comet/35 bg-comet/16 px-4 py-2 text-xs font-medium tracking-[0.22em] text-comet disabled:opacity-45"
+                >
+                  {isDeleting ? "删除中" : "删除"}
+                </button>
+              ) : null}
             </div>
           </header>
 
@@ -532,7 +589,7 @@ export default function AdminPage() {
                     <div className="relative h-20 w-20 overflow-hidden rounded-[42%_58%_50%_50%] border border-emerald-100/18 bg-emerald-100/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_0_30px_rgba(110,231,183,0.16)]">
                       {aboutForm.avatarUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={aboutForm.avatarUrl} alt="舰长头像预览" className="h-full w-full object-cover" />
+                        <img src={resolveUploadUrl(aboutForm.avatarUrl)} alt="舰长头像预览" className="h-full w-full object-cover" />
                       ) : (
                         <span className="flex h-full w-full items-center justify-center font-display text-3xl text-emerald-50/70">
                           {(aboutForm.name || "S").slice(0, 1).toUpperCase()}
@@ -662,11 +719,17 @@ export default function AdminPage() {
                 <div className="space-y-4 rounded-[1.5rem] border border-white/10 bg-white/6 p-4">
                   <label className="block text-xs uppercase tracking-[0.22em] text-starlight/42">
                     星群
-                    <input
+                    <select
                       value={form.cluster}
                       onChange={(event) => updateField("cluster", event.target.value)}
-                      className="mt-2 w-full rounded-2xl border border-white/10 bg-white/7 px-4 py-3 text-sm normal-case tracking-normal text-starlight outline-none"
-                    />
+                      className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm normal-case tracking-normal text-starlight outline-none"
+                    >
+                      <option value="PKM">知识管理</option>
+                      <option value="Interface">前端 / UI</option>
+                      <option value="Writing">写作输出</option>
+                      <option value="Systems">技术架构</option>
+                      <option value="Life">生活日常</option>
+                    </select>
                   </label>
                   <label className="block text-xs uppercase tracking-[0.22em] text-starlight/42">
                     状态

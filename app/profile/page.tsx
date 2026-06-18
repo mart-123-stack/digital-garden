@@ -76,6 +76,12 @@ function readNumber(key: string, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function resolveUploadUrl(url: string | null | undefined) {
+  if (!url) return "";
+  if (url.startsWith("/uploads/")) return url.replace(/^\/uploads\//, "/api/uploads/");
+  return url;
+}
+
 function PilotLicenseCard({
   visitorId,
   xp,
@@ -540,7 +546,7 @@ function ProfileEditor() {
             <div className="relative h-20 w-20 overflow-hidden rounded-[32%_68%_55%_45%] border border-cyan-200/20 bg-cyan-200/8 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_0_28px_rgba(103,232,249,0.12)]">
               {display.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={display.avatarUrl} alt="头像" className="h-full w-full object-cover" />
+                <img src={resolveUploadUrl(display.avatarUrl)} alt="头像" className="h-full w-full object-cover" />
               ) : (
                 <span className="flex h-full w-full items-center justify-center font-display text-3xl text-cyan-100/70">
                   {displayName.slice(0, 1).toUpperCase()}
@@ -608,7 +614,7 @@ function ProfileEditor() {
           <div className="relative h-20 w-20 overflow-hidden rounded-[32%_68%_55%_45%] border border-cyan-200/20 bg-cyan-200/8 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_0_28px_rgba(103,232,249,0.12)]">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="当前头像预览" className="h-full w-full object-cover" />
+              <img src={resolveUploadUrl(avatarUrl)} alt="当前头像预览" className="h-full w-full object-cover" />
             ) : (
               <span className="flex h-full w-full items-center justify-center font-display text-3xl text-cyan-100/70">
                 {(nickname || name || user.nickname || user.email).slice(0, 1).toUpperCase()}

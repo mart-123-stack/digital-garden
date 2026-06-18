@@ -251,7 +251,7 @@ function BentoPanel({ note, isLoading, onClose }: { note: Note; isLoading: boole
     <>
       <motion.div
         aria-hidden="true"
-        className="fixed inset-0 z-40 bg-slate-950/78 backdrop-blur-lg"
+        className="fixed inset-0 z-40 bg-slate-950/90 backdrop-blur-xl"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -259,7 +259,7 @@ function BentoPanel({ note, isLoading, onClose }: { note: Note; isLoading: boole
       />
       <motion.section
         key={note.id}
-        className="fixed inset-x-5 bottom-5 top-24 z-50 mx-auto flex max-w-5xl flex-col overflow-hidden rounded-[1.7rem] border border-white/20 bg-slate-950/94 p-4 text-left shadow-[0_24px_90px_rgba(2,6,23,0.72),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl sm:p-5 lg:top-20"
+        className="fixed inset-x-5 bottom-5 top-24 z-50 mx-auto flex max-w-5xl flex-col overflow-hidden rounded-[1.7rem] border border-white/20 bg-[#020617] p-4 text-left shadow-[0_24px_90px_rgba(0,0,0,0.86),inset_0_1px_0_rgba(255,255,255,0.16)] sm:p-5 lg:top-20"
         initial={{ opacity: 0, scale: 0.72, y: 80, filter: "blur(12px)" }}
         animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
         exit={{ opacity: 0, scale: 0.78, y: 60, filter: "blur(12px)" }}
@@ -272,9 +272,9 @@ function BentoPanel({ note, isLoading, onClose }: { note: Note; isLoading: boole
       >
         返回星环
       </button>
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-[1.35rem] bg-slate-950/96 pr-1">
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <article className="rounded-3xl border border-white/12 bg-black/18 p-6">
+        <article className="rounded-3xl border border-white/12 bg-slate-900/92 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
           <p className="text-[10px] uppercase tracking-[0.36em] text-comet/70">Flattened Fragment</p>
           <h1 className="mt-4 font-display text-4xl leading-tight text-starlight sm:text-6xl">
             {note.title}
@@ -285,7 +285,7 @@ function BentoPanel({ note, isLoading, onClose }: { note: Note; isLoading: boole
               正在解析这块知识碎片的晶体脉络...
             </p>
           ) : note.content ? (
-            <pre className="mt-6 max-h-72 overflow-y-auto whitespace-pre-wrap break-words border-t border-white/10 pt-5 font-sans text-sm leading-7 text-starlight/60">
+            <pre className="mt-6 max-h-72 overflow-y-auto whitespace-pre-wrap break-words rounded-2xl border border-white/10 bg-black/32 p-5 font-sans text-sm leading-7 text-starlight/76">
               {note.content}
             </pre>
           ) : (
@@ -299,7 +299,7 @@ function BentoPanel({ note, isLoading, onClose }: { note: Note; isLoading: boole
           <ContentEngagement targetType="note" targetSlug={note.id} />
         </article>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-          <div className="rounded-3xl border border-white/12 bg-white/[0.07] p-5">
+          <div className="rounded-3xl border border-white/12 bg-slate-900/88 p-5">
             <p className="text-xs uppercase tracking-[0.28em] text-starlight/44">Tags</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {note.tags.map((tag) => (
@@ -309,7 +309,7 @@ function BentoPanel({ note, isLoading, onClose }: { note: Note; isLoading: boole
               ))}
             </div>
           </div>
-          <div className="rounded-3xl border border-white/12 bg-white/[0.07] p-5">
+          <div className="rounded-3xl border border-white/12 bg-slate-900/88 p-5">
             <p className="text-xs uppercase tracking-[0.28em] text-starlight/44">Linked Notes</p>
             <div className="mt-4 space-y-2">
               {note.links.map((link) => (
