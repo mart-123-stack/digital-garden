@@ -15,6 +15,11 @@ type CollectibleStar = {
 type ProfileStats = {
   totalPoints: number;
   todayPoints: number;
+  dailyLoginPoints: number;
+  dailyReadPoints: number;
+  dailyCommentPoints: number;
+  dailyGameWinPoints: number;
+  dailyGameRecordPoints: number;
   roseFavorites: number;
   notesRead: number;
   bestScore: number;
@@ -346,26 +351,29 @@ function PetPanel({ pet }: { pet: StarPet }) {
 }
 
 function WeeklyMissions({
-  todayPoints,
-  roseCount,
-  notesRead,
-  gameBest
+  dailyLoginPoints,
+  dailyReadPoints,
+  dailyCommentPoints,
+  dailyGameWinPoints,
+  dailyGameRecordPoints
 }: {
-  todayPoints: number;
-  roseCount: number;
-  notesRead: number;
-  gameBest: number;
+  dailyLoginPoints: number;
+  dailyReadPoints: number;
+  dailyCommentPoints: number;
+  dailyGameWinPoints: number;
+  dailyGameRecordPoints: number;
 }) {
   const missions = [
-    { label: "每日登录", current: Math.min(todayPoints, 10), total: 10, detail: "+10 xp" },
-    { label: "阅读花田/星环", current: Math.min(notesRead * 5, 20), total: 20, detail: "上限 +20 xp" },
-    { label: "收藏玫瑰", current: Math.min(roseCount * 5, 25), total: 25, detail: "给喜欢的文章做标记" },
-    { label: "刷新游戏纪录", current: gameBest > 0 ? 50 : 0, total: 50, detail: "破纪录 +50 xp" }
+    { label: "每日登录", current: Math.min(dailyLoginPoints, 10), total: 10, detail: "+10 xp / 24h" },
+    { label: "阅读花田/星环", current: Math.min(dailyReadPoints, 20), total: 20, detail: "上限 +20 xp / 24h" },
+    { label: "发表评论", current: Math.min(dailyCommentPoints, 25), total: 25, detail: "上限 +25 xp / 24h" },
+    { label: "完成小游戏", current: Math.min(dailyGameWinPoints, 15), total: 15, detail: "上限 +15 xp / 24h" },
+    { label: "刷新游戏纪录", current: Math.min(dailyGameRecordPoints, 50), total: 50, detail: "破纪录 +50 xp / 24h" }
   ];
 
   return (
     <section className="rounded-[1.5rem] border border-cyan-200/14 bg-white/[0.055] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_48px_rgba(2,6,23,0.22)] backdrop-blur-md">
-      <p className="text-[10px] uppercase tracking-[0.32em] text-cyan-100/58">Weekly Missions</p>
+      <p className="text-[10px] uppercase tracking-[0.32em] text-cyan-100/58">24h Missions</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {missions.map((mission) => {
           const progress = Math.min(100, (mission.current / mission.total) * 100);
@@ -940,6 +948,11 @@ export default function ProfilePage() {
   const [notesRead, setNotesRead] = useState(0);
   const [gameBest, setGameBest] = useState(0);
   const [todayPoints, setTodayPoints] = useState(0);
+  const [dailyLoginPoints, setDailyLoginPoints] = useState(0);
+  const [dailyReadPoints, setDailyReadPoints] = useState(0);
+  const [dailyCommentPoints, setDailyCommentPoints] = useState(0);
+  const [dailyGameWinPoints, setDailyGameWinPoints] = useState(0);
+  const [dailyGameRecordPoints, setDailyGameRecordPoints] = useState(0);
   const [petMessage, setPetMessage] = useState("");
   const [isPetUpdating, setIsPetUpdating] = useState(false);
   const [pet, setPet] = useState<StarPet>({
@@ -983,6 +996,11 @@ export default function ProfilePage() {
           setRoseCount(stats.roseFavorites);
           setNotesRead(stats.notesRead);
           setGameBest(stats.bestScore);
+          setDailyLoginPoints(stats.dailyLoginPoints);
+          setDailyReadPoints(stats.dailyReadPoints);
+          setDailyCommentPoints(stats.dailyCommentPoints);
+          setDailyGameWinPoints(stats.dailyGameWinPoints);
+          setDailyGameRecordPoints(stats.dailyGameRecordPoints);
           setPet(data.pet as StarPet);
         }
       } catch {
@@ -1098,7 +1116,13 @@ export default function ProfilePage() {
         <PetPanel pet={pet} />
         <ProfileEditor />
         <ReactionArchive />
-        <WeeklyMissions todayPoints={todayPoints} roseCount={roseCount} notesRead={notesRead} gameBest={gameBest} />
+        <WeeklyMissions
+          dailyLoginPoints={dailyLoginPoints}
+          dailyReadPoints={dailyReadPoints}
+          dailyCommentPoints={dailyCommentPoints}
+          dailyGameWinPoints={dailyGameWinPoints}
+          dailyGameRecordPoints={dailyGameRecordPoints}
+        />
         <div className="space-y-3">
           <PetShop
             xp={xp}

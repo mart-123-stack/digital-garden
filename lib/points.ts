@@ -23,7 +23,10 @@ export async function awardPoints(userId: string, action: keyof typeof POINT_VAL
   const existing = await query<{ total: string }>(
     `SELECT COALESCE(SUM(points), 0)::text AS total
      FROM star_points_ledger
-     WHERE user_id = $1 AND action = $2 AND daily_bucket = CURRENT_DATE`,
+     WHERE user_id = $1
+       AND action = $2
+       AND points > 0
+       AND created_at >= NOW() - INTERVAL '24 hours'`,
     [userId, action]
   );
 

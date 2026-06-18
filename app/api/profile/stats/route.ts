@@ -7,6 +7,11 @@ export const dynamic = "force-dynamic";
 type StatsRow = {
   total_points: string;
   today_points: string;
+  daily_login_points: string;
+  daily_read_points: string;
+  daily_comment_points: string;
+  daily_game_win_points: string;
+  daily_game_record_points: string;
 };
 
 type PetRow = {
@@ -39,7 +44,12 @@ export async function GET(request: NextRequest) {
       query<StatsRow>(
         `SELECT
            COALESCE(SUM(points), 0)::text AS total_points,
-           COALESCE(SUM(points) FILTER (WHERE daily_bucket = CURRENT_DATE AND points > 0), 0)::text AS today_points
+           COALESCE(SUM(points) FILTER (WHERE points > 0 AND created_at >= NOW() - INTERVAL '24 hours'), 0)::text AS today_points,
+           COALESCE(SUM(points) FILTER (WHERE action = 'daily_login' AND points > 0 AND created_at >= NOW() - INTERVAL '24 hours'), 0)::text AS daily_login_points,
+           COALESCE(SUM(points) FILTER (WHERE action = 'read_content' AND points > 0 AND created_at >= NOW() - INTERVAL '24 hours'), 0)::text AS daily_read_points,
+           COALESCE(SUM(points) FILTER (WHERE action = 'comment' AND points > 0 AND created_at >= NOW() - INTERVAL '24 hours'), 0)::text AS daily_comment_points,
+           COALESCE(SUM(points) FILTER (WHERE action = 'game_win' AND points > 0 AND created_at >= NOW() - INTERVAL '24 hours'), 0)::text AS daily_game_win_points,
+           COALESCE(SUM(points) FILTER (WHERE action = 'game_record' AND points > 0 AND created_at >= NOW() - INTERVAL '24 hours'), 0)::text AS daily_game_record_points
          FROM star_points_ledger
          WHERE user_id = $1`,
         [auth.user!.id]
@@ -70,6 +80,11 @@ export async function GET(request: NextRequest) {
       stats: {
         totalPoints: Number(points.rows[0]?.total_points || 0),
         todayPoints: Number(points.rows[0]?.today_points || 0),
+        dailyLoginPoints: Number(points.rows[0]?.daily_login_points || 0),
+        dailyReadPoints: Number(points.rows[0]?.daily_read_points || 0),
+        dailyCommentPoints: Number(points.rows[0]?.daily_comment_points || 0),
+        dailyGameWinPoints: Number(points.rows[0]?.daily_game_win_points || 0),
+        dailyGameRecordPoints: Number(points.rows[0]?.daily_game_record_points || 0),
         roseFavorites: Number(activity.rows[0]?.rose_favorites || 0),
         notesRead: Number(activity.rows[0]?.notes_read || 0),
         bestScore: Number(activity.rows[0]?.best_score || 0)

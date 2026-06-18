@@ -143,6 +143,7 @@ CREATE INDEX IF NOT EXISTS idx_comments_target ON comments(target_type, target_s
 CREATE INDEX IF NOT EXISTS idx_reactions_target ON reactions(target_type, target_slug, reaction_type);
 CREATE INDEX IF NOT EXISTS idx_game_scores_rank ON game_scores(game_id, score DESC);
 CREATE INDEX IF NOT EXISTS idx_points_user_day ON star_points_ledger(user_id, daily_bucket, action);
+CREATE INDEX IF NOT EXISTS idx_points_user_action_created ON star_points_ledger(user_id, action, created_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_provider_identity ON users(auth_provider, provider_id) WHERE provider_id IS NOT NULL;
 
 INSERT INTO about_profile (id, name, title, location, bio, avatar_url, interests, experiences)
