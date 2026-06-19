@@ -16,6 +16,10 @@ function extractTextContent(node: ReactNode): string {
   return "";
 }
 
+function normalizeMarkdown(content: string) {
+  return content.replace(/^(#{1,6})(?=\S)/gm, "$1 ");
+}
+
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -156,7 +160,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
           )
         }}
       >
-        {content}
+        {normalizeMarkdown(content)}
       </ReactMarkdown>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValue, useSpring } from "framer-motion";
 import { ContentEngagement } from "@/components/ContentEngagement";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 
 type NoteStatus = "seedling" | "budding" | "evergreen";
 
@@ -259,69 +260,50 @@ function BentoPanel({ note, isLoading, onClose }: { note: Note; isLoading: boole
       />
       <motion.section
         key={note.id}
-        className="fixed inset-x-5 bottom-5 top-24 z-50 mx-auto flex max-w-5xl flex-col overflow-hidden rounded-[1.7rem] border border-white/20 bg-[#020617] p-4 text-left shadow-[0_24px_90px_rgba(0,0,0,0.86),inset_0_1px_0_rgba(255,255,255,0.16)] sm:p-5 lg:top-20"
-        initial={{ opacity: 0, scale: 0.72, y: 80, filter: "blur(12px)" }}
-        animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
-        exit={{ opacity: 0, scale: 0.78, y: 60, filter: "blur(12px)" }}
-        transition={{ type: "spring", stiffness: 130, damping: 18, mass: 0.9 }}
+        className="fixed inset-x-4 bottom-5 top-20 z-50 mx-auto flex max-w-4xl flex-col rounded-[1.7rem] border border-cyan-100/20 bg-[#050914]/96 p-5 text-left shadow-[0_30px_110px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-xl sm:p-6"
+        initial={{ opacity: 0, y: 42, scale: 0.94, filter: "blur(12px)" }}
+        animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+        exit={{ opacity: 0, y: 36, scale: 0.96, filter: "blur(12px)" }}
+        transition={{ type: "spring", stiffness: 130, damping: 18 }}
       >
-      <button
-        type="button"
-        onClick={onClose}
-        className="mb-4 rounded-full border border-white/16 bg-white/8 px-4 py-2 text-xs uppercase tracking-[0.22em] text-comet/80"
-      >
-        返回星环
-      </button>
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-[1.35rem] bg-slate-950/96 pr-1">
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <article className="rounded-3xl border border-white/12 bg-slate-900/92 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-          <p className="text-[10px] uppercase tracking-[0.36em] text-comet/70">Flattened Fragment</p>
-          <h1 className="mt-4 font-display text-4xl leading-tight text-starlight sm:text-6xl">
-            {note.title}
-          </h1>
-          <p className="mt-5 text-base leading-8 text-starlight/62">{note.summary}</p>
+        <div className="flex shrink-0 items-start justify-between gap-5 border-b border-white/10 pb-4">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.34em] text-comet/70">
+              {note.cluster} · {note.status}
+            </p>
+            <h1 className="mt-3 font-display text-4xl leading-tight text-starlight sm:text-6xl">{note.title}</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-starlight/55">{note.summary}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-white/14 bg-white/8 px-4 py-2 text-xs uppercase tracking-[0.2em] text-cyan-100/75"
+          >
+            关闭
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-3xl bg-black/20 px-4 py-5 pr-3">
           {isLoading ? (
-            <p className="mt-6 rounded-2xl border border-white/10 bg-white/[0.05] p-4 text-sm leading-7 text-starlight/48">
+            <p className="text-sm text-starlight/50">
               正在解析这块知识碎片的晶体脉络...
             </p>
-          ) : note.content ? (
-            <pre className="mt-6 max-h-72 overflow-y-auto whitespace-pre-wrap break-words rounded-2xl border border-white/10 bg-black/32 p-5 font-sans text-sm leading-7 text-starlight/76">
-              {note.content}
-            </pre>
           ) : (
-            <p className="mt-6 rounded-2xl border border-white/10 bg-white/[0.05] p-4 text-sm leading-7 text-starlight/45">
-              这块碎片还没有正文。可以在 /admin 里继续给它嫁接 Markdown 内容。
-            </p>
+            <MarkdownRenderer content={note.content || "这块碎片还没有正文。可以在 /admin 里继续给它嫁接 Markdown 内容。"} />
           )}
-          <p className="mt-6 inline-flex rounded-full border border-emerald-200/18 bg-emerald-200/8 px-3 py-1 text-xs uppercase tracking-[0.24em] text-emerald-100/74">
-            {note.status}
-          </p>
           <ContentEngagement targetType="note" targetSlug={note.id} />
-        </article>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-          <div className="rounded-3xl border border-white/12 bg-slate-900/88 p-5">
-            <p className="text-xs uppercase tracking-[0.28em] text-starlight/44">Tags</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {note.tags.map((tag) => (
-                <span key={tag} className="rounded-full border border-comet/18 bg-comet/8 px-3 py-1 text-xs text-comet/80">
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-3xl border border-white/12 bg-slate-900/88 p-5">
-            <p className="text-xs uppercase tracking-[0.28em] text-starlight/44">Linked Notes</p>
-            <div className="mt-4 space-y-2">
-              {note.links.map((link) => (
-                <p key={link} className="rounded-2xl bg-white/[0.06] px-3 py-2 text-sm text-starlight/64">
-                  [[{link}]]
-                </p>
-              ))}
-            </div>
-          </div>
         </div>
-      </div>
-      </div>
+        <div className="flex shrink-0 flex-wrap gap-2 border-t border-white/10 pt-4">
+          {note.tags.map((tag) => (
+            <span key={tag} className="rounded-full border border-comet/18 bg-comet/8 px-3 py-1 text-xs text-comet/80">
+              #{tag}
+            </span>
+          ))}
+          {note.links.map((link) => (
+            <span key={link} className="rounded-full border border-cyan-100/14 bg-cyan-100/8 px-3 py-1 text-xs text-cyan-100/62">
+              [[{link}]]
+            </span>
+          ))}
+        </div>
       </motion.section>
     </>
   );
